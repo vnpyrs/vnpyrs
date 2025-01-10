@@ -1,0 +1,50 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "vnpyrs"
+description = "vnpy backtest module written in Rust and Python"
+readme = "README.md"
+authors = [
+  { name = "Liehan Wu", email = "vnpyrs@hotmail.com" },
+]
+dependencies = [
+	"tzlocal",
+	"numpy",
+	"pandas",
+	"ta-lib",
+	"deap",
+	"plotly",
+	"pytz",
+	"tqdm",
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.7"
+keywords = ["quant", "quantitative", "investment", "trading"]
+classifiers = [
+	"Development Status :: 4 - Beta",
+	"Environment :: Console",
+	"Intended Audience :: Science/Research",
+	"License :: OSI Approved :: MIT License",
+	"Operating System :: OS Independent",
+	"Programming Language :: Rust",
+	"Programming Language :: Python :: 3.7",
+	"Programming Language :: Python :: 3.8",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+	"Topic :: Office/Business :: Financial :: Investment",
+	"Natural Language :: Chinese (Simplified)",
+]
+dynamic = ["version"]
+[tool.maturin]
+features = ["pyo3/extension-module"]
+
+[project.urls]
+Homepage = "https://github.com/vnpyrs/vnpyrs"
+Documentation = "https://github.com/vnpyrs/vnpyrs"
+Repository = "https://github.com/vnpyrs/vnpyrs"
+Changelog = "https://github.com/vnpyrs/vnpyrs"
