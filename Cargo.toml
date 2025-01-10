@@ -2,6 +2,11 @@
 name = "vnpyrs"
 version = "0.1.1"
 edition = "2021"
+description = "vnpy backtest module written in Rust and Python"
+repository = "https://github.com/vnpyrs/vnpyrs"
+license = "MIT"
+homepage = "https://github.com/vnpyrs/vnpyrs"
+authors = ["Liehan Wu <vnpyrs@hotmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
