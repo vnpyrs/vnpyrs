@@ -4,16 +4,21 @@ vnpyrs是以提升性能为目的，部分代码用Rust语言重新实现的vnpy
 
 ## 背景
 
-众所周知，Python生态强大，编码灵活，但是有个缺点，就是慢。2024年，我实验性的用Rust重写了vnpy的回测模块，惊喜的发现，运行速度提升了近20倍。
+*众所周知，Python生态强大，编码灵活，但是有个缺点，就是慢。2024年，我实验性的用Rust重写了vnpy的回测模块，惊喜的发现，运行速度提升了近20倍。
 显然，移植到Rust这件事的价值是巨大的。但还有个问题，由于它100%是用Rust编写的，包括策略也是用Rust编写的，那用户就无法使用Python的各种库了。况且，Rust是出了名的难入门的语言。上述的两点会降低它的实用性。
-因此，在2025年我重新设定了目标，该项目必须完全兼容Python生态，100%兼容已经为vnpy编写的策略，同时要提升性能。
-由于用户代码是用Python编写的，那性能提升就不会像第一次用纯Rust编写时那样夸张了，但省下的时间依然不少。如果用examples文件夹里面的案例测试，在不改一行策略代码的情况下，综合速度提升了一倍。（具体提升多少和策略的具体实现紧密相关）
+
+*因此，在2025年我重新设定了目标，该项目必须完全兼容Python生态，100%兼容已经为vnpy编写的策略，同时要提升性能。
+由于用户代码是用Python编写的，那么性能提升就不会像第一次用纯Rust编写时那样夸张了，但省下的时间依然不少。如果用examples文件夹里面的案例测试，在不改一行策略代码的情况下，在10核16G的电脑上，配合Python3.11，综合速度提升了一倍。（具体提升多少涉及硬件配置、Python版本和具体策略）
 
 ## 环境准备
 
 vnpyrs对python包的依赖和vnpy几乎一样，但去掉了UI相关的包。Python版本需要3.7以上，推荐3.10以上
 
 ## 安装步骤
+
+*最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，vnpyrs的代码基本上和vnpy原版的代码一一对应，这样你可以把对vnpy的修改移植到vnpyrs上去。
+
+*如果只是想试用一下，可以通过pip安装，但PYPI服务器上的版本可能是通用版本，未针对特定Python版本做过性能优化。
 
 **Windows**
 
@@ -74,23 +79,24 @@ def main():
     setting.add_parameter("slow_window",12,20,1)
     engine.run_bf_optimization(setting)
     engine.run_ga_optimization(setting)
-    print(time.perf_counter()-start) #这里用于统计耗时，可以看到vnpyrs耗时只有vnpy的一半
+    print(time.perf_counter()-start) #这里用于统计耗时，可以看到vnpyrs耗时比vnpy少
 
 if __name__ == '__main__':
     main()
 ```
 
-vnpyrs使用的数据库和json配置文件和vnpy完全一样，二者是共用数据库的。标的300.LOCAL的数据在examples下，导入300_1min_vnpy.csv到vnpy即可。
-在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
+*vnpyrs使用的数据库和json配置文件和vnpy完全一样，二者是共用数据库的。标的300.LOCAL的数据在examples下，导入300_1min_vnpy.csv到vnpy引擎里即可。
+*在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
     python run.py
 
 
 ## 开发路线图
 
-不会完全移植vnpy。
-一个原因是vnpy用到了很多动态语言的特性，以实现插件化，这部分在静态语言上实现很困难，或者需要大量的unsafe；
-另一个原因是没必要，UI和网络模块即使用Rust、C++重写，体验也不会明显变好。
-但是未来会支持用Rust、C、C++写策略，这样的话回测性能提升10倍也是有可能的。
+*不会完全移植vnpy。
+*一个原因是vnpy用到了很多动态语言的特性，以实现插件化，这部分在静态语言上实现很困难，或者需要大量的unsafe
+*另一个原因是没必要，UI和网络模块即使通过Rust、C++重写，体验也不会明显变好。
+*但是未来会支持用Rust、C、C++写策略，这样的话回测性能提升10倍也是有可能的。
 
 ## 更新日志
 0.1.1：支持sqlite和mysql数据库
+0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题

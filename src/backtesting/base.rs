@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use chrono::{Duration, NaiveDateTime};
+use chrono::{DateTime, Duration};
+use chrono_tz::Tz;
 use pyo3::prelude::*;
 use strum::{Display, EnumString};
 
@@ -49,7 +50,7 @@ pub struct StopOrder {
     pub volume: f64,
     pub stop_orderid: String,
     pub strategy_name: String,
-    pub datetime: NaiveDateTime,
+    pub datetime: DateTime<Tz>,
     pub lock: bool,
     pub net: bool,
     pub vt_orderids: Vec<String>,

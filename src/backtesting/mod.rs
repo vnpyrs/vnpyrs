@@ -10,7 +10,8 @@ use std::{
 pub use base::BacktestingMode;
 
 use base::{EngineType, StopOrder, StopOrderStatus, INTERVAL_DELTA_MAP, STOPORDER_PREFIX};
-use chrono::{Local, NaiveDate, NaiveDateTime, TimeDelta, TimeZone, Timelike};
+use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeDelta, TimeZone, Timelike};
+use chrono_tz::Tz;
 use pyo3::{prelude::*, types::PyDict};
 
 use crate::trader::{
@@ -57,7 +58,7 @@ pub struct BacktestingEngine {
     strategy: Option<PyObject>,
     tick: Mutex<Option<TickData>>,
     bar: Mutex<Option<BarData>>,
-    datetime: Mutex<Option<NaiveDateTime>>,
+    datetime: Mutex<Option<DateTime<Tz>>>,
 
     #[pyo3(get, set)]
     interval: Option<Interval>,
@@ -98,6 +99,10 @@ impl BacktestingEngine {
 
     #[new]
     pub fn __new__() -> Self {
+        #[cfg(Py_LIMITED_API)]
+        {
+            println!("您正在使用通用版，兼容Python3.7以上所有版本，但是会降低运行性能。建议拉取源代码自行编译，或下载针对特定Python版本的whl包通过pip安装");
+        }
         BacktestingEngine {
             vt_symbol: "".to_string(),
             symbol: "".to_string(),
@@ -401,7 +406,7 @@ impl BacktestingEngine {
 
         // Add trade data into daily reuslt.
         for trade in self.trades.lock().unwrap().values() {
-            let d = trade.lock().unwrap().datetime.date();
+            let d = trade.lock().unwrap().datetime.naive_local().date();
             let mut daily_result_map = self.daily_results.lock().unwrap();
             let daily_result = daily_result_map.get_mut(&d).unwrap();
             daily_result.add_trade(trade.lock().unwrap().clone())
@@ -482,7 +487,7 @@ impl BacktestingEngine {
     fn run_ga_optimization(&self) {}
 
     fn update_daily_close(&self, price: f64) {
-        let d = self.datetime.lock().unwrap().unwrap().date();
+        let d = self.datetime.lock().unwrap().unwrap().naive_local().date();
 
         self.daily_results
             .lock()

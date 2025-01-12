@@ -3,9 +3,9 @@
 use pyo3::prelude::*;
 use std::{collections::HashSet, sync::LazyLock};
 
-use chrono::NaiveDateTime;
-
 use super::constant::{Direction, Interval, Offset, OrderType, Status};
+use chrono::{DateTime,NaiveDateTime};
+use chrono_tz::Tz;
 
 pub static ACTIVE_STATUSES: LazyLock<HashSet<Status>> = LazyLock::new(|| {
     vec![Status::SUBMITTING, Status::NOTTRADED, Status::PARTTRADED]
@@ -21,7 +21,7 @@ pub struct TickData {
 
     pub symbol: String,
     pub exchange: String,
-    pub datetime: NaiveDateTime,
+    pub datetime: DateTime<Tz>,
 
     pub name: String,
     pub volume: f64,
@@ -76,7 +76,7 @@ pub struct BarData {
 
     pub symbol: String,
     pub exchange: String,
-    pub datetime: NaiveDateTime,
+    pub datetime: DateTime<Tz>,
 
     pub interval: Interval,
     pub volume: f64,
@@ -116,7 +116,7 @@ pub struct OrderData {
     pub volume: f64,
     pub traded: f64,
     pub status: Status,
-    pub datetime: NaiveDateTime,
+    pub datetime: DateTime<Tz>,
     pub reference: String,
 }
 
@@ -148,7 +148,7 @@ pub struct TradeData {
     pub offset: Offset,
     pub price: f64,
     pub volume: f64,
-    pub datetime: NaiveDateTime,
+    pub datetime: DateTime<Tz>,
 }
 
 impl TradeData {

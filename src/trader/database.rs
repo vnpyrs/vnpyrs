@@ -1,10 +1,14 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
+
+use chrono_tz::Tz;
 
 use super::{
     database_impl::{BaseDatabase, MysqlDatabase, SqliteDatabase, DBMAP},
     setting::SETTINGS,
     utility::get_file_path,
 };
+
+pub static DB_TZ: LazyLock<Tz> = LazyLock::new(|| SETTINGS.database_timezone.parse().expect("配置文件中database.timezone错误"));
 
 pub fn get_database() -> Arc<dyn BaseDatabase> {
     // Read database related global setting

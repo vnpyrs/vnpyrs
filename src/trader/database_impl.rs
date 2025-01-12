@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use chrono_tz::Tz;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySqlPool;
 use sqlx::Row;
@@ -8,11 +9,13 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+use super::database::DB_TZ;
 use super::object::MixData;
 use super::object::TickData;
 use super::{constant::Interval, object::BarData};
 
 pub static DBMAP: Mutex<GlobalDBMap> = Mutex::new(GlobalDBMap::new());
+static SH_TZ: Tz = Tz::Asia__Shanghai;
 
 pub struct GlobalDBMap {
     pub sqlite: Option<Arc<SqliteDatabase>>,
@@ -70,6 +73,7 @@ impl BaseDatabase for SqliteDatabase {
         start: NaiveDateTime,
         end: NaiveDateTime,
     ) -> LinkedList<MixData> {
+        let tz = DB_TZ.clone();
         let interval_str = interval.to_string();
 
         let s = self.rt.block_on(
@@ -81,7 +85,11 @@ impl BaseDatabase for SqliteDatabase {
             bars.push_back(MixData::BarData(BarData {
                 symbol: db_bar.get::<String, usize>(0),
                 exchange: db_bar.get::<String, usize>(1),
-                datetime: db_bar.get::<NaiveDateTime, usize>(2),
+                datetime: db_bar
+                    .get::<NaiveDateTime, usize>(2)
+                    .and_local_timezone(SH_TZ)
+                    .unwrap()
+                    .with_timezone(&tz),
                 interval: Interval::from_str(db_bar.get::<&str, usize>(3))
                     .expect("数据库中interval字段只能是1m,1h,d,w,tick中的一个"),
                 volume: db_bar.get::<f64, usize>(4),
@@ -104,6 +112,7 @@ impl BaseDatabase for SqliteDatabase {
         start: NaiveDateTime,
         end: NaiveDateTime,
     ) -> LinkedList<MixData> {
+        let tz = DB_TZ.clone();
         let s = self.rt.block_on(
             sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=? and exchange=? and datetime>=? and datetime<=? ORDER BY datetime")
                     .bind(symbol).bind(exchange).bind(start).bind(end)
@@ -113,7 +122,11 @@ impl BaseDatabase for SqliteDatabase {
             ticks.push_back(MixData::TickData(TickData {
                 symbol: db_tick.get::<String, usize>(0),
                 exchange: db_tick.get::<String, usize>(1),
-                datetime: db_tick.get::<NaiveDateTime, usize>(2),
+                datetime: db_tick
+                    .get::<NaiveDateTime, usize>(2)
+                    .and_local_timezone(SH_TZ)
+                    .unwrap()
+                    .with_timezone(&tz),
                 name: db_tick.get::<String, usize>(3),
                 volume: db_tick.get::<f64, usize>(4),
                 turnover: db_tick.get::<f64, usize>(5),
@@ -178,6 +191,7 @@ impl BaseDatabase for MysqlDatabase {
         start: NaiveDateTime,
         end: NaiveDateTime,
     ) -> LinkedList<MixData> {
+        let tz = DB_TZ.clone();
         let interval_str = interval.to_string();
 
         let s = self.rt.block_on(
@@ -189,7 +203,11 @@ impl BaseDatabase for MysqlDatabase {
             bars.push_back(MixData::BarData(BarData {
                 symbol: db_bar.get::<String, usize>(0),
                 exchange: db_bar.get::<String, usize>(1),
-                datetime: db_bar.get::<NaiveDateTime, usize>(2),
+                datetime: db_bar
+                    .get::<NaiveDateTime, usize>(2)
+                    .and_local_timezone(SH_TZ)
+                    .unwrap()
+                    .with_timezone(&tz),
                 interval: Interval::from_str(db_bar.get::<&str, usize>(3))
                     .expect("数据库中interval字段只能是1m,1h,d,w,tick中的一个"),
                 volume: db_bar.get::<f64, usize>(4),
@@ -212,6 +230,7 @@ impl BaseDatabase for MysqlDatabase {
         start: NaiveDateTime,
         end: NaiveDateTime,
     ) -> LinkedList<MixData> {
+        let tz = DB_TZ.clone();
         let s = self.rt.block_on(
             sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=? and exchange=? and datetime>=? and datetime<=? ORDER BY datetime")
                     .bind(symbol).bind(exchange).bind(start).bind(end)
@@ -221,7 +240,11 @@ impl BaseDatabase for MysqlDatabase {
             ticks.push_back(MixData::TickData(TickData {
                 symbol: db_tick.get::<String, usize>(0),
                 exchange: db_tick.get::<String, usize>(1),
-                datetime: db_tick.get::<NaiveDateTime, usize>(2),
+                datetime: db_tick
+                    .get::<NaiveDateTime, usize>(2)
+                    .and_local_timezone(SH_TZ)
+                    .unwrap()
+                    .with_timezone(&tz),
                 name: db_tick.get::<String, usize>(3),
                 volume: db_tick.get::<f64, usize>(4),
                 turnover: db_tick.get::<f64, usize>(5),
