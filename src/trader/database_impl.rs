@@ -20,6 +20,7 @@ static SH_TZ: Tz = Tz::Asia__Shanghai;
 pub struct GlobalDBMap {
     pub sqlite: Option<Arc<SqliteDatabase>>,
     pub mysql: Option<Arc<MysqlDatabase>>,
+    pub mongodb: Option<Arc<MongodbDatabase>>,
 }
 
 impl GlobalDBMap {
@@ -27,6 +28,7 @@ impl GlobalDBMap {
         GlobalDBMap {
             sqlite: None,
             mysql: None,
+            mongodb: None,
         }
     }
 }
@@ -282,5 +284,166 @@ impl BaseDatabase for MysqlDatabase {
             }));
         }
         ticks
+    }
+}
+
+use mongodb::{
+    bson::{doc, Document},
+    Client, Collection,
+};
+pub struct MongodbDatabase {
+    client: Client,
+    coll_bar_data: Collection<Document>,
+    coll_tick_data: Collection<Document>,
+    rt: tokio::runtime::Runtime,
+}
+
+impl MongodbDatabase {
+    pub fn connect(
+        url: &str,
+        username: &str,
+        password: &str,
+        database: &str,
+    ) -> Result<MongodbDatabase, Box<dyn std::error::Error>> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
+        let (client, coll_bar_data, coll_tick_data) = rt.block_on(async {
+            let client = Client::with_uri_str(url).await.expect("Mongodb URL error");
+            let db = client.database(database);
+            let coll_bar_data = db.collection("bar_data");
+            let coll_tick_data = db.collection("tick_data");
+            (client, coll_bar_data, coll_tick_data)
+        });
+        Ok(MongodbDatabase {
+            client,
+            coll_bar_data,
+            coll_tick_data,
+            rt,
+        })
+    }
+}
+
+impl BaseDatabase for MongodbDatabase {
+    fn load_bar_data(
+        &self,
+        symbol: &str,
+        exchange: &str,
+        interval: Interval,
+        start: NaiveDateTime,
+        end: NaiveDateTime,
+    ) -> LinkedList<MixData> {
+        let start_ = bson::DateTime::from_millis(
+            start.and_local_timezone(SH_TZ).unwrap().timestamp_millis(),
+        );
+        let end_ =
+            bson::DateTime::from_millis(end.and_local_timezone(SH_TZ).unwrap().timestamp_millis());
+        let tz = DB_TZ.clone();
+        self.rt.block_on(async {
+            let mut bars: LinkedList<MixData> = LinkedList::new();
+            let mut cursor = self
+                .coll_bar_data
+                .find(doc! {"symbol":symbol,"exchange":exchange,"interval":interval.to_string(),"datetime": doc! { "$gte": start_,"$lte":end_ }})
+                .sort(doc! {"datetime":1})
+                .await
+                .unwrap();
+            while cursor.advance().await.unwrap() {
+                let current = cursor.current();
+                bars.push_back(MixData::BarData(BarData{
+                    symbol: current.get_str("symbol").unwrap().to_string(),
+                    exchange: current.get_str("exchange").unwrap().to_string(),
+                    datetime: current
+                    .get_datetime("datetime")
+                    .unwrap()
+                    .to_chrono()
+                    .with_timezone(&tz),
+                    interval: Interval::from_str(current.get_str("interval").unwrap())
+                        .expect("数据库中interval字段只能是1m,1h,d,w,tick中的一个"),
+                    volume: current.get("volume").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    turnover: current.get("turnover").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    open_interest: current.get("open_interest").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    open_price: current.get("open_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    high_price: current.get("high_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    low_price: current.get("low_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    close_price: current.get("close_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    gateway_name: "DB",
+                }));
+            }
+            bars
+        })
+    }
+
+    fn load_tick_data(
+        &self,
+        symbol: &str,
+        exchange: &str,
+        start: NaiveDateTime,
+        end: NaiveDateTime,
+    ) -> LinkedList<MixData> {
+        let start_ = bson::DateTime::from_millis(
+            start.and_local_timezone(SH_TZ).unwrap().timestamp_millis(),
+        );
+        let end_ =
+            bson::DateTime::from_millis(end.and_local_timezone(SH_TZ).unwrap().timestamp_millis());
+        let tz = DB_TZ.clone();
+        self.rt.block_on(async {
+            let mut ticks: LinkedList<MixData> = LinkedList::new();
+            let mut cursor = self
+                .coll_tick_data
+                .find(doc! {"symbol":symbol,"exchange":exchange,"datetime": doc! { "$gte": start_,"$lte":end_ }})
+                .sort(doc! {"datetime":1})
+                .await
+                .unwrap();
+            while cursor.advance().await.unwrap() {
+                let current = cursor.current();
+                ticks.push_back(MixData::TickData(TickData{
+                    symbol: current.get_str("symbol").unwrap().to_string(),
+                    exchange: current.get_str("exchange").unwrap().to_string(),
+                    datetime: current
+                    .get_datetime("datetime")
+                    .unwrap()
+                    .to_chrono()
+                    .with_timezone(&tz),
+                    name: current.get_str("name").unwrap().to_string(),
+                    volume: current.get("volume").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    turnover: current.get("turnover").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    open_interest: current.get("open_interest").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    last_price: current.get("last_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    last_volume: current.get("last_volume").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    limit_up: current.get("limit_up").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    limit_down: current.get("limit_down").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    open_price: current.get("open_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    high_price: current.get("high_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    low_price: current.get("low_price").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    pre_close: current.get("pre_close").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_price_1: current.get("bid_price_1").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_price_2: current.get("bid_price_2").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_price_3: current.get("bid_price_3").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_price_4: current.get("bid_price_4").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_price_5: current.get("bid_price_5").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_price_1: current.get("ask_price_1").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_price_2: current.get("ask_price_2").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_price_3: current.get("ask_price_3").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_price_4: current.get("ask_price_4").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_price_5: current.get("ask_price_5").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_volume_1: current.get("bid_volume_1").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_volume_2: current.get("bid_volume_2").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_volume_3: current.get("bid_volume_3").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_volume_4: current.get("bid_volume_4").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    bid_volume_5: current.get("bid_volume_5").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_volume_1: current.get("ask_volume_1").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_volume_2: current.get("ask_volume_2").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_volume_3: current.get("ask_volume_3").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_volume_4: current.get("ask_volume_4").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    ask_volume_5: current.get("ask_volume_5").unwrap().unwrap().as_f64().or(Some(0.0)).unwrap(),
+                    localtime: current
+                    .get_datetime("localtime")
+                    .unwrap_or(bson::DateTime::from_millis(0))
+                    .to_chrono().naive_local(),
+                    gateway_name: "DB",
+                    }));
+            }
+            ticks
+        })
     }
 }
