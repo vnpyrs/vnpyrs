@@ -3,8 +3,8 @@
 use pyo3::prelude::*;
 use std::{collections::HashSet, sync::LazyLock};
 
-use super::constant::{Direction, Interval, Offset, OrderType, Status};
-use chrono::{DateTime,NaiveDateTime};
+use super::{constant::{Direction, Interval, Offset, OrderType, Status}, database::DB_TZ};
+use chrono::{DateTime, NaiveDateTime};
 use chrono_tz::Tz;
 
 pub static ACTIVE_STATUSES: LazyLock<HashSet<Status>> = LazyLock::new(|| {
@@ -86,6 +86,25 @@ pub struct BarData {
     pub high_price: f64,
     pub low_price: f64,
     pub close_price: f64,
+}
+
+impl Default for BarData {
+    fn default() -> Self {
+        Self {
+            gateway_name: Default::default(),
+            symbol: Default::default(),
+            exchange: Default::default(),
+            datetime: NaiveDateTime::default().and_local_timezone(DB_TZ.clone()).unwrap(),
+            interval: Interval::MINUTE,
+            volume: Default::default(),
+            turnover: Default::default(),
+            open_interest: Default::default(),
+            open_price: Default::default(),
+            high_price: Default::default(),
+            low_price: Default::default(),
+            close_price: Default::default(),
+        }
+    }
 }
 
 impl BarData {
