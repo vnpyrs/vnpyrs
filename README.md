@@ -16,7 +16,7 @@ vnpyrs对python包的依赖和vnpy几乎一样，但去掉了UI相关的包。Py
 
 ## pip安装
 
-最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，vnpyrs的代码基本上和vnpy原版的代码一一对应，这样你可以把对vnpy的修改移植到vnpyrs上去。
+最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，vnpyrs的代码基本上和vnpy原版的代码一一对应，这样您可以把对vnpy的修改移植到vnpyrs上去（虽然需要学习Rust，但是在有本工程大量范例的情况下不会很难）。
 
 如果只是想试用一下，可以通过pip安装，但PYPI服务器上的版本一般是通用版本，未针对特定Python版本做过性能优化。
 
@@ -40,7 +40,7 @@ pip install vnpyrs
 
 **Windows**
 
-大体上和Linux一样，只是ta-lib的安装依靠现成的whl包
+大体上和Linux一样，只是ta-lib Python版的安装可以依靠现成的whl包，可以从这里下载：https://github.com/cgohlke/talib-build/releases
 
 **Linux**
 
@@ -56,7 +56,8 @@ git clone https://gitee.com/vnpyrs/vnpyrs.git
 ```
 
 2.安装rust
-Rust的官网网站是https://www.rust-lang.org/，但因为官方的下载速度越来越慢，建议用国内字节的代理，代理的官网是https://rsproxy.cn/
+
+Rust的官网网站是https://www.rust-lang.org/ ，但因为官方的下载速度越来越慢，建议用国内字节的代理，代理的官网是https://rsproxy.cn/
 ```
 export RUSTUP_DIST_SERVER="https://rsproxy.cn"
 export RUSTUP_UPDATE_ROOT="https://rsproxy.cn/rustup"
@@ -84,6 +85,7 @@ git-fetch-with-cli = true
 ```
 
 3.安装maturin
+
 vnpyrs是一个Rust和Python的混合项目，因此还需要安装maturin插件，您可以全局安装
 ```
 pip install maturin
@@ -95,18 +97,19 @@ pip install maturin
 ```
 python3 -m maturin build -r
 ```
-现在项目根目录下会多出一个target文件夹，里面有个wheels文件夹，再里面有一个.whl后缀的文件，这个就是针对你当前环境的Python版本做性能优化过的包。如果你之前可以正常运行vnpy，请跳过第5步，直接进行第6步
+现在项目根目录下会多出一个target文件夹，里面有个wheels文件夹，再里面有一个.whl后缀的文件，这个就是针对您当前环境的Python版本做性能优化过的包。如果您之前可以正常运行vnpy，请跳过第5步，直接进行第6步
 
 5.安装ta-lib
-如果想通过pip的方式安装Python版本的ta-lib，必须先安装C++版本的ta-lib。ta-lib的最新版本是0.6，相比之前，官方给出了更为详细的安装步骤：https://ta-lib.org/install/#linux-debian-packages。
+如果想通过pip的方式安装Python版本的ta-lib，必须先安装C++版本的ta-lib。ta-lib的最新版本是0.6，相比之前，官方给出了更为详细的安装步骤：https://ta-lib.org/install/#linux-debian-packages 。
 
 对于大部分人来说可以下载页面上的*_amd64.deb包并使用以下命令安装，虽然这个是C++版本的，但是安装了这个以后，Python版本的ta-lib会因依赖关系随其他包自动安装
 ```
 sudo dpkg -i ta-lib_0.6.4_amd64.deb
 ```
-另一种安装方式是找到对应操作系统的对应Python版本的whl包，这个官方只提供Windows平台的。
+另一种安装方式是找到对应操作系统的对应Python版本的whl包，但ta-lib官方只提供Windows平台的。
 
 6.安装vnpyrs的whl文件
+
 whl文件可以通过pip来安装。注意安装过程中会下载它所依赖的Python包，建议使用pip代理以加快下载速度，设置方法自行搜索
 ```
 pip install (whl文件的文件名)
@@ -114,6 +117,7 @@ pip install (whl文件的文件名)
 至此安装完成
 
 7.（可选）建立Python虚拟环境，并以调试模式编译、运行vnpyrs
+
 在项目根目录下执行以下命令
 ```
 python3 -m venv .env
@@ -124,11 +128,11 @@ source .env/bin/activate
 ```
 之后再运行pip、python3、maturin命令的话，只影响该环境，或被该环境影响。直到退出shell会话
 
-这个时候你无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译vnpyrs，而只需要一条：
+这个时候您无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译vnpyrs，而只需要一条：
 ```
 python3 -m maturin develop -r
 ```
-这在要修改vnpyrs代码的时候特别有用
+这个技巧在需要修改vnpyrs代码的时候特别有用
 
 
 ## 脚本运行
@@ -191,5 +195,7 @@ if __name__ == '__main__':
 *未来可能会支持用Rust、C、C++写策略，这样的话回测性能提升10倍也是有可能的。
 
 ## 更新日志
-0.1.1：支持sqlite和mysql数据库
-0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题
+
+0.1.1：支持sqlite和mysql数据库(2025-1-10)
+
+0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题(2025-1-12)
