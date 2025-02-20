@@ -15,7 +15,7 @@ use chrono_tz::Tz;
 use pyo3::{prelude::*, types::PyDict};
 
 use crate::trader::{
-    constant::{Direction, Interval, Offset, OrderType, Status},
+    constant::{Direction, Interval, Offset_, OrderType, Status},
     database::get_database,
     object::{BarData, MixData, OrderData, TickData, TradeData},
     utility::{extract_vt_symbol, round_to},
@@ -84,6 +84,8 @@ pub struct BacktestingEngine {
 
     #[pyo3(get, set)]
     rs_use_global_data: bool,
+
+    rs_pyfunc_output: Option<PyObject>,
 }
 
 #[pymethods]
@@ -146,6 +148,7 @@ impl BacktestingEngine {
             daily_df: None,
 
             rs_use_global_data: false,
+            rs_pyfunc_output: None,
         }
     }
 
@@ -252,12 +255,12 @@ impl BacktestingEngine {
                 return Ok(());
             }
         }
-        self.output("开始加载历史数据");
+        self.output(py, "开始加载历史数据");
         if self.end == NaiveDateTime::default() {
             self.end = Local::now().naive_local();
         }
         if self.start >= self.end {
-            self.output("起始日期必须小于结束日期");
+            self.output(py, "起始日期必须小于结束日期");
             return Ok(());
         }
         if self.rs_use_global_data {
@@ -281,11 +284,14 @@ impl BacktestingEngine {
         while start < self.end {
             py.check_signals()?;
             let progress_bar = "#".repeat((progress * 10.0 + 1.0) as usize);
-            self.output(&format!(
-                "加载进度：{progress_bar} [{progress:.0}%]",
-                progress_bar = progress_bar,
-                progress = progress * 100.0
-            ));
+            self.output(
+                py,
+                &format!(
+                    "加载进度：{progress_bar} [{progress:.0}%]",
+                    progress_bar = progress_bar,
+                    progress = progress * 100.0
+                ),
+            );
 
             end = NaiveDateTime::min(end, self.end); // Make sure end time stays within set range
 
@@ -324,7 +330,7 @@ impl BacktestingEngine {
         } else {
             self.history_data.len()
         };
-        self.output(format!("历史数据加载完成，数据量：{}", len).as_str());
+        self.output(py, format!("历史数据加载完成，数据量：{}", len).as_str());
         Ok(())
     }
 
@@ -338,7 +344,7 @@ impl BacktestingEngine {
             .unwrap()
             .setattr(py, "inited", true)
             .unwrap();
-        self.output("策略初始化完成");
+        self.output(py, "策略初始化完成");
 
         self.strategy
             .as_ref()
@@ -350,7 +356,7 @@ impl BacktestingEngine {
             .unwrap()
             .setattr(py, "trading", true)
             .unwrap();
-        self.output("开始回放历史数据");
+        self.output(py, "开始回放历史数据");
 
         let total_size: usize = if self.rs_use_global_data {
             GLOBAL_HISTORY_DATA.lock().unwrap().len()
@@ -381,11 +387,10 @@ impl BacktestingEngine {
                 let ix = i / batch_size;
                 let progress = (ix as f64 / 10.0).min(1.0);
                 let progress_bar = "=".repeat(ix + 1);
-                self.output(&format!(
-                    "回放进度：{} [{:.0}%]",
-                    progress_bar,
-                    progress * 100.0
-                ));
+                self.output(
+                    py,
+                    &format!("回放进度：{} [{:.0}%]", progress_bar, progress * 100.0),
+                );
             }
         }
         self.strategy
@@ -393,15 +398,15 @@ impl BacktestingEngine {
             .unwrap()
             .call_method0(py, "on_stop")
             .unwrap();
-        self.output("历史数据回放结束");
+        self.output(py, "历史数据回放结束");
         Ok(())
     }
 
     fn calculate_result(&mut self, py: Python<'_>) -> PyResult<PyObject> {
-        self.output("开始计算逐日盯市盈亏");
+        self.output(py, "开始计算逐日盯市盈亏");
 
         if self.trades.lock().unwrap().len() == 0 {
-            self.output("回测成交记录为空");
+            self.output(py, "回测成交记录为空");
         }
 
         // Add trade data into daily reuslt.
@@ -474,7 +479,7 @@ impl BacktestingEngine {
             .call_method1("set_index", ("date",))?;
         self.daily_df = Some(daily_df.unbind());
 
-        self.output("逐日盯市盈亏计算完成");
+        self.output(py, "逐日盯市盈亏计算完成");
         Ok(self.daily_df.as_ref().unwrap().clone_ref(py))
     }
 
@@ -605,7 +610,7 @@ impl BacktestingEngine {
                 symbol: order.symbol.clone(),
                 exchange: order.exchange.clone(),
                 orderid: order.orderid.clone(),
-                tradeid: self.trade_count.lock().unwrap().to_string(),
+                tradeid: format!("{:8}", self.trade_count.lock().unwrap()),
                 direction: order.direction,
                 offset: order.offset,
                 price: trade_price,
@@ -717,7 +722,7 @@ impl BacktestingEngine {
                 symbol: order.lock().unwrap().symbol.clone(),
                 exchange: order.lock().unwrap().exchange.clone(),
                 orderid: order.lock().unwrap().orderid.clone(),
-                tradeid: self.trade_count.lock().unwrap().to_string(),
+                tradeid: format!("{:8}", self.trade_count.lock().unwrap()),
                 direction: order.lock().unwrap().direction,
                 offset: order.lock().unwrap().offset,
                 price: trade_price,
@@ -819,7 +824,7 @@ impl BacktestingEngine {
         py: Python<'_>,
         _strategy: PyObject,
         direction: Direction,
-        offset: Offset,
+        offset: Offset_,
         price: f64,
         volume: f64,
         stop: bool,
@@ -840,7 +845,7 @@ impl BacktestingEngine {
         &self,
         py: Python<'_>,
         direction: Direction,
-        offset: Offset,
+        offset: Offset_,
         price: f64,
         volume: f64,
     ) -> PyResult<String> {
@@ -887,7 +892,7 @@ impl BacktestingEngine {
         &self,
         _py: Python<'_>,
         direction: Direction,
-        offset: Offset,
+        offset: Offset_,
         price: f64,
         volume: f64,
     ) -> PyResult<String> {
@@ -1018,8 +1023,15 @@ impl BacktestingEngine {
 
     pub fn put_strategy_event(&self, _strategy: PyObject) {}
 
-    pub fn output(&self, msg: &str) {
-        println!("{}\t{}", Local::now().naive_local(), msg);
+    pub fn output(&self, py: Python<'_>, msg: &str) {
+        match self.rs_pyfunc_output.as_ref() {
+            Some(func) => {
+                let _ = func.call1(py, (msg,));
+            }
+            None => {
+                println!("{}\t{}", Local::now().naive_local(), msg);
+            }
+        }
     }
 
     pub fn get_all_trades(&self) -> Vec<TradeData> {
@@ -1040,11 +1052,28 @@ impl BacktestingEngine {
             .collect()
     }
 
-    pub fn get_all_daily_results(&self) {}
+    pub fn get_all_daily_results(&self) -> Vec<DailyResult> {
+        self.daily_results
+            .lock()
+            .unwrap()
+            .values()
+            .cloned()
+            .collect()
+    }
+
+    pub fn set_output(&mut self, func: PyObject) -> PyResult<()> {
+        self.rs_pyfunc_output = Some(func);
+        Ok(())
+    }
+
+    pub fn has_history_data(&self) -> bool {
+        !self.history_data.is_empty()
+    }
 }
 
+#[pyclass(get_all)]
 #[derive(Default, Clone)]
-struct DailyResult {
+pub struct DailyResult {
     date: NaiveDate,
     close_price: f64,
     pre_close: f64,

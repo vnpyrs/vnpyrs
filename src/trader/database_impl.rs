@@ -292,7 +292,7 @@ use mongodb::{
     Client, Collection,
 };
 pub struct MongodbDatabase {
-    client: Client,
+    _client: Client,
     coll_bar_data: Collection<Document>,
     coll_tick_data: Collection<Document>,
     rt: tokio::runtime::Runtime,
@@ -301,14 +301,14 @@ pub struct MongodbDatabase {
 impl MongodbDatabase {
     pub fn connect(
         url: &str,
-        username: &str,
-        password: &str,
+        _username: &str,
+        _password: &str,
         database: &str,
     ) -> Result<MongodbDatabase, Box<dyn std::error::Error>> {
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
-        let (client, coll_bar_data, coll_tick_data) = rt.block_on(async {
+        let (_client, coll_bar_data, coll_tick_data) = rt.block_on(async {
             let client = Client::with_uri_str(url).await.expect("Mongodb URL error");
             let db = client.database(database);
             let coll_bar_data = db.collection("bar_data");
@@ -316,7 +316,7 @@ impl MongodbDatabase {
             (client, coll_bar_data, coll_tick_data)
         });
         Ok(MongodbDatabase {
-            client,
+            _client,
             coll_bar_data,
             coll_tick_data,
             rt,

@@ -17,7 +17,7 @@ from abc import ABC
 from copy import copy
 from typing import Any, Callable, List
 
-from vnpyrs.trader.constant import Interval, Direction, Offset
+from vnpyrs.trader.constant import Interval, Direction, Offset_
 from vnpyrs.trader.object import BarData, TickData, OrderData, TradeData
 from vnpyrs.trader.utility import BarGenerator
 
@@ -36,6 +36,7 @@ from pandas import DataFrame
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from vnpyrs.backtesting import (BacktestingEngine,BacktestingMode)
+vnpyrs.backtesting.OptimizationSetting = OptimizationSetting
 
 def _(str):
     return str
@@ -751,7 +752,7 @@ class CtaTemplate(ABC):
         """
         return self.send_order(
             Direction.LONG,
-            Offset.OPEN,
+            Offset_.OPEN,
             price,
             volume,
             stop,
@@ -772,7 +773,7 @@ class CtaTemplate(ABC):
         """
         return self.send_order(
             Direction.SHORT,
-            Offset.CLOSE,
+            Offset_.CLOSE,
             price,
             volume,
             stop,
@@ -793,7 +794,7 @@ class CtaTemplate(ABC):
         """
         return self.send_order(
             Direction.SHORT,
-            Offset.OPEN,
+            Offset_.OPEN,
             price,
             volume,
             stop,
@@ -814,7 +815,7 @@ class CtaTemplate(ABC):
         """
         return self.send_order(
             Direction.LONG,
-            Offset.CLOSE,
+            Offset_.CLOSE,
             price,
             volume,
             stop,
@@ -825,7 +826,7 @@ class CtaTemplate(ABC):
     def send_order(
         self,
         direction: Direction,
-        offset: Offset,
+        offset: Offset_,
         price: float,
         volume: float,
         stop: bool = False,
@@ -1463,4 +1464,5 @@ BacktestingEngine.run_bf_optimization=member_run_bf_optimization
 BacktestingEngine.run_optimization = member_run_bf_optimization
 BacktestingEngine.run_ga_optimization=member_run_ga_optimization
 
-sys.modules["vnpy_ctastrategy"]=vnpyrs
+if 'vnpy' not in sys.modules.keys():
+    sys.modules["vnpy_ctastrategy"]=vnpyrs

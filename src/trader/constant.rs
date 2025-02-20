@@ -10,9 +10,9 @@ pub enum Direction {
     NET,
 }
 
-#[pyclass(eq, eq_int, get_all)]
+#[pyclass(eq, eq_int)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, Display)]
-pub enum Offset {
+pub enum Offset_ {
     NONE,
     OPEN,
     CLOSE,
@@ -101,7 +101,7 @@ impl Interval {
 #[pymodule]
 pub fn constant(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Direction>()?;
-    m.add_class::<Offset>()?;
+    m.add_class::<Offset_>()?;
     m.add_class::<Status>()?;
     m.add_class::<Product>()?;
     m.add_class::<OrderType>()?;

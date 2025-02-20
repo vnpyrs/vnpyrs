@@ -3,7 +3,10 @@
 use pyo3::prelude::*;
 use std::{collections::HashSet, sync::LazyLock};
 
-use super::{constant::{Direction, Interval, Offset, OrderType, Status}, database::DB_TZ};
+use super::{
+    constant::{Direction, Interval, Offset_, OrderType, Status},
+    database::DB_TZ,
+};
 use chrono::{DateTime, NaiveDateTime};
 use chrono_tz::Tz;
 
@@ -94,7 +97,9 @@ impl Default for BarData {
             gateway_name: Default::default(),
             symbol: Default::default(),
             exchange: Default::default(),
-            datetime: NaiveDateTime::default().and_local_timezone(DB_TZ.clone()).unwrap(),
+            datetime: NaiveDateTime::default()
+                .and_local_timezone(DB_TZ.clone())
+                .unwrap(),
             interval: Interval::MINUTE,
             volume: Default::default(),
             turnover: Default::default(),
@@ -119,7 +124,7 @@ pub enum MixData {
     BarData(BarData),
 }
 
-#[pyclass]
+#[pyclass(get_all)]
 #[derive(Debug, Clone)]
 pub struct OrderData {
     pub gateway_name: &'static str,
@@ -130,7 +135,7 @@ pub struct OrderData {
 
     pub r#type: OrderType,
     pub direction: Direction,
-    pub offset: Offset,
+    pub offset: Offset_,
     pub price: f64,
     pub volume: f64,
     pub traded: f64,
@@ -139,6 +144,7 @@ pub struct OrderData {
     pub reference: String,
 }
 
+#[pymethods]
 impl OrderData {
     pub fn vt_symbol(&self) -> String {
         format!("{}.{}", self.symbol, self.exchange)
@@ -153,7 +159,7 @@ impl OrderData {
     }
 }
 
-#[pyclass]
+#[pyclass(get_all)]
 #[derive(Debug, Clone)]
 pub struct TradeData {
     pub gateway_name: &'static str,
@@ -164,12 +170,13 @@ pub struct TradeData {
     pub tradeid: String,
     pub direction: Direction,
 
-    pub offset: Offset,
+    pub offset: Offset_,
     pub price: f64,
     pub volume: f64,
     pub datetime: DateTime<Tz>,
 }
 
+#[pymethods]
 impl TradeData {
     pub fn vt_symbol(&self) -> String {
         format!("{}.{}", self.symbol, self.exchange.to_string())

@@ -22,7 +22,7 @@ pub fn get_database() -> Arc<dyn BaseDatabase> {
             if DBMAP.lock().unwrap().sqlite.is_none() {
                 DBMAP.lock().unwrap().sqlite = Some(Arc::new(
                     SqliteDatabase::connect(
-                        &get_file_path(&SETTINGS.database_database)
+                        &get_file_path("database.db")
                             .into_os_string()
                             .into_string()
                             .unwrap(),

@@ -5,7 +5,7 @@ use chrono_tz::Tz;
 use pyo3::prelude::*;
 use strum::{Display, EnumString};
 
-use crate::trader::constant::{Direction, Interval, Offset};
+use crate::trader::constant::{Direction, Interval, Offset_};
 
 pub const STOPORDER_PREFIX: &'static str = "STOP";
 
@@ -45,7 +45,7 @@ impl BacktestingMode {
 pub struct StopOrder {
     pub vt_symbol: String,
     pub direction: Direction,
-    pub offset: Offset,
+    pub offset: Offset_,
     pub price: f64,
     pub volume: f64,
     pub stop_orderid: String,
