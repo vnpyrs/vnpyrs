@@ -13,6 +13,7 @@ from typing import Optional
 from vnpyrs.optimize import OptimizationSetting
 
 from .event_engine import Event, EventEngine
+
 # from vnpy.trader.engine import BaseEngine, MainEngine
 # from vnpy.trader.constant import Interval
 # from vnpy.trader.utility import extract_vt_symbol
@@ -23,8 +24,10 @@ from vnpyrs.backtesting import (
     BacktestingEngine,
 )
 
+
 def _(str):
     return str
+
 
 APP_NAME = "CtaBacktester"
 
@@ -33,7 +36,7 @@ EVENT_BACKTESTER_BACKTESTING_FINISHED = "eBacktesterBacktestingFinished"
 EVENT_BACKTESTER_OPTIMIZATION_FINISHED = "eBacktesterOptimizationFinished"
 
 
-class BacktesterEngine():
+class BacktesterEngine:
     """
     For running CTA strategy backtesting.
     """
@@ -77,7 +80,9 @@ class BacktesterEngine():
         path2: Path = Path.cwd().joinpath("strategies")
         self.load_strategy_class_from_folder(path2, "strategies")
 
-    def load_strategy_class_from_folder(self, path: Path, module_name: str = "") -> None:
+    def load_strategy_class_from_folder(
+        self, path: Path, module_name: str = ""
+    ) -> None:
         """
         Load strategy class from certain folder.
         """
@@ -101,6 +106,7 @@ class BacktesterEngine():
             for name in dir(module):
                 value = getattr(module, name)
                 from vnpyrs import CtaTemplate
+
                 if (
                     isinstance(value, type)
                     and issubclass(value, CtaTemplate)
@@ -135,7 +141,7 @@ class BacktesterEngine():
         size: int,
         pricetick: float,
         capital: int,
-        setting: dict
+        setting: dict,
     ) -> None:
         """"""
         self.result_df = None
@@ -159,14 +165,11 @@ class BacktesterEngine():
             size=size,
             pricetick=pricetick,
             capital=capital,
-            mode=mode
+            mode=mode,
         )
 
         strategy_class: type = self.classes[class_name]
-        engine.add_strategy(
-            strategy_class,
-            setting
-        )
+        engine.add_strategy(strategy_class, setting)
 
         engine.load_data()
         if not engine.has_history_data():
@@ -205,7 +208,7 @@ class BacktesterEngine():
         size: int,
         pricetick: float,
         capital: int,
-        setting: dict
+        setting: dict,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -225,8 +228,8 @@ class BacktesterEngine():
                 size,
                 pricetick,
                 capital,
-                setting
-            )
+                setting,
+            ),
         )
         self.thread.start()
 
@@ -263,7 +266,7 @@ class BacktesterEngine():
         capital: int,
         optimization_setting: OptimizationSetting,
         use_ga: bool,
-        max_workers: int
+        max_workers: int,
     ) -> None:
         """"""
         self.result_values = None
@@ -286,14 +289,11 @@ class BacktesterEngine():
             size=size,
             pricetick=pricetick,
             capital=capital,
-            mode=mode
+            mode=mode,
         )
 
         strategy_class: type = self.classes[class_name]
-        engine.add_strategy(
-            strategy_class,
-            {}
-        )
+        engine.add_strategy(strategy_class, {})
 
         # 0则代表不限制
         if max_workers == 0:
@@ -301,15 +301,11 @@ class BacktesterEngine():
 
         if use_ga:
             self.result_values = engine.run_ga_optimization(
-                optimization_setting,
-                output=False,
-                max_workers=max_workers
+                optimization_setting, output=False, max_workers=max_workers
             )
         else:
             self.result_values = engine.run_bf_optimization(
-                optimization_setting,
-                output=False,
-                max_workers=max_workers
+                optimization_setting, output=False, max_workers=max_workers
             )
 
         # Clear thread object handler.
@@ -334,7 +330,7 @@ class BacktesterEngine():
         capital: int,
         optimization_setting: OptimizationSetting,
         use_ga: bool,
-        max_workers: int
+        max_workers: int,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -356,8 +352,8 @@ class BacktesterEngine():
                 capital,
                 optimization_setting,
                 use_ga,
-                max_workers
-            )
+                max_workers,
+            ),
         )
         self.thread.start()
 
@@ -384,4 +380,3 @@ class BacktesterEngine():
         strategy_class: type = self.classes[class_name]
         file_path: str = getfile(strategy_class)
         return file_path
-

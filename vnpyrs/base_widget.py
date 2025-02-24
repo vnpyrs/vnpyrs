@@ -1,14 +1,17 @@
 import csv
 from typing import Any, Dict
-from PySide6 import QtCore,QtWidgets,QtGui
+from PySide6 import QtCore, QtWidgets, QtGui
 
 from vnpyrs.event_engine import Event, EventEngine
 
 COLOR_LONG = QtGui.QColor("red")
 COLOR_SHORT = QtGui.QColor("green")
+COLOR_NET = QtGui.QColor("white")
+
 
 def _(str):
     return str
+
 
 class BaseCell(QtWidgets.QTableWidgetItem):
     """
@@ -65,12 +68,15 @@ class DirectionCell(EnumCell):
         """
         Cell color is set according to direction.
         """
-        super().set_content(content, data)
-
         if str(content) == "Direction.SHORT":
+            super().set_content("空", data)
             self.setForeground(COLOR_SHORT)
-        else:
+        elif str(content) == "Direction.LONG":
+            super().set_content("多", data)
             self.setForeground(COLOR_LONG)
+        else:
+            super().set_content("净", data)
+            self.setForeground(COLOR_NET)
 
 
 class BaseMonitor(QtWidgets.QTableWidget):
@@ -198,14 +204,17 @@ class BaseMonitor(QtWidgets.QTableWidget):
         """
         Resize all columns according to contents.
         """
-        self.horizontalHeader().resizeSections(QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.horizontalHeader().resizeSections(
+            QtWidgets.QHeaderView.ResizeMode.ResizeToContents
+        )
 
     def save_csv(self) -> None:
         """
         Save table data into a csv file
         """
         path, __ = QtWidgets.QFileDialog.getSaveFileName(
-            self, _("保存数据"), "", "CSV(*.csv)")
+            self, _("保存数据"), "", "CSV(*.csv)"
+        )
 
         if not path:
             return
@@ -247,5 +256,6 @@ class BaseMonitor(QtWidgets.QTableWidget):
 
         if isinstance(column_state, QtCore.QByteArray):
             self.horizontalHeader().restoreState(column_state)
-            self.horizontalHeader().setSortIndicator(-1, QtCore.Qt.SortOrder.AscendingOrder)
-
+            self.horizontalHeader().setSortIndicator(
+                -1, QtCore.Qt.SortOrder.AscendingOrder
+            )

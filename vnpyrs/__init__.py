@@ -1,4 +1,5 @@
 # import the contents of the Rust library into the Python extension
+from vnpyrs.utility import load_json, save_json
 from .vnpyrs import *
 from .vnpyrs import __all__
 
@@ -12,6 +13,7 @@ from functools import partial
 
 import numpy as np
 import talib
+import subprocess
 
 from abc import ABC
 from copy import copy
@@ -23,20 +25,24 @@ from vnpyrs.trader.utility import BarGenerator
 
 import vnpyrs.optimize
 import sys
-sys.modules["vnpyrs.trader.optimize"]=vnpyrs.optimize
+
+sys.modules["vnpyrs.trader.optimize"] = vnpyrs.optimize
 from vnpyrs.trader.optimize import (
     OptimizationSetting,
     check_optimization_setting,
     run_bf_optimization,
-    run_ga_optimization
+    run_ga_optimization,
 )
 
 from datetime import date, datetime, timedelta
 from pandas import DataFrame
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from vnpyrs.backtesting import (BacktestingEngine,BacktestingMode)
+from vnpyrs.backtesting import BacktestingEngine, BacktestingMode
+from vnpyrs import CandleChartDialog
+
 vnpyrs.backtesting.OptimizationSetting = OptimizationSetting
+
 
 def _(str):
     return str
@@ -173,11 +179,7 @@ class ArrayManager(object):
         return result[-1]
 
     def apo(
-        self,
-        fast_period: int,
-        slow_period: int,
-        matype: int = 0,
-        array: bool = False
+        self, fast_period: int, slow_period: int, matype: int = 0, array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         APO.
@@ -206,11 +208,7 @@ class ArrayManager(object):
         return result[-1]
 
     def ppo(
-        self,
-        fast_period: int,
-        slow_period: int,
-        matype: int = 0,
-        array: bool = False
+        self, fast_period: int, slow_period: int, matype: int = 0, array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         PPO.
@@ -265,7 +263,9 @@ class ArrayManager(object):
             return result
         return result[-1]
 
-    def std(self, n: int, nbdev: int = 1, array: bool = False) -> Union[float, np.ndarray]:
+    def std(
+        self, n: int, nbdev: int = 1, array: bool = False
+    ) -> Union[float, np.ndarray]:
         """
         Standard deviation.
         """
@@ -324,11 +324,8 @@ class ArrayManager(object):
         fast_period: int,
         slow_period: int,
         signal_period: int,
-        array: bool = False
-    ) -> Union[
-        Tuple[np.ndarray, np.ndarray, np.ndarray],
-        Tuple[float, float, float]
-    ]:
+        array: bool = False,
+    ) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray], Tuple[float, float, float]]:
         """
         MACD.
         """
@@ -398,12 +395,14 @@ class ArrayManager(object):
         time_period1: int = 7,
         time_period2: int = 14,
         time_period3: int = 28,
-        array: bool = False
+        array: bool = False,
     ) -> Union[float, np.ndarray]:
         """
         Ultimate Oscillator.
         """
-        result: np.ndarray = talib.ULTOSC(self.high, self.low, self.close, time_period1, time_period2, time_period3)
+        result: np.ndarray = talib.ULTOSC(
+            self.high, self.low, self.close, time_period1, time_period2, time_period3
+        )
         if array:
             return result
         return result[-1]
@@ -418,14 +417,8 @@ class ArrayManager(object):
         return result[-1]
 
     def boll(
-        self,
-        n: int,
-        dev: float,
-        array: bool = False
-    ) -> Union[
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[float, float]
-    ]:
+        self, n: int, dev: float, array: bool = False
+    ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[float, float]]:
         """
         Bollinger Channel.
         """
@@ -438,14 +431,8 @@ class ArrayManager(object):
         return up, down
 
     def keltner(
-        self,
-        n: int,
-        dev: float,
-        array: bool = False
-    ) -> Union[
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[float, float]
-    ]:
+        self, n: int, dev: float, array: bool = False
+    ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[float, float]]:
         """
         Keltner Channel.
         """
@@ -459,10 +446,7 @@ class ArrayManager(object):
 
     def donchian(
         self, n: int, array: bool = False
-    ) -> Union[
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[float, float]
-    ]:
+    ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[float, float]]:
         """
         Donchian Channel.
         """
@@ -474,13 +458,8 @@ class ArrayManager(object):
         return up[-1], down[-1]
 
     def aroon(
-        self,
-        n: int,
-        array: bool = False
-    ) -> Union[
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[float, float]
-    ]:
+        self, n: int, array: bool = False
+    ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[float, float]]:
         """
         Aroon indicator.
         """
@@ -539,15 +518,14 @@ class ArrayManager(object):
         return result[-1]
 
     def adosc(
-        self,
-        fast_period: int,
-        slow_period: int,
-        array: bool = False
+        self, fast_period: int, slow_period: int, array: bool = False
     ) -> Union[float, np.ndarray]:
         """
         ADOSC.
         """
-        result: np.ndarray = talib.ADOSC(self.high, self.low, self.close, self.volume, fast_period, slow_period)
+        result: np.ndarray = talib.ADOSC(
+            self.high, self.low, self.close, self.volume, fast_period, slow_period
+        )
         if array:
             return result
         return result[-1]
@@ -569,11 +547,8 @@ class ArrayManager(object):
         slowk_matype: int,
         slowd_period: int,
         slowd_matype: int,
-        array: bool = False
-    ) -> Union[
-        Tuple[float, float],
-        Tuple[np.ndarray, np.ndarray]
-    ]:
+        array: bool = False,
+    ) -> Union[Tuple[float, float], Tuple[np.ndarray, np.ndarray]]:
         """
         Stochastic Indicator
         """
@@ -585,7 +560,7 @@ class ArrayManager(object):
             slowk_period,
             slowk_matype,
             slowd_period,
-            slowd_matype
+            slowd_matype,
         )
         if array:
             return k, d
@@ -745,19 +720,13 @@ class CtaTemplate(ABC):
         volume: float,
         stop: bool = False,
         lock: bool = False,
-        net: bool = False
+        net: bool = False,
     ) -> list:
         """
         Send buy order to open a long position.
         """
         return self.send_order(
-            Direction.LONG,
-            Offset_.OPEN,
-            price,
-            volume,
-            stop,
-            lock,
-            net
+            Direction.LONG, Offset_.OPEN, price, volume, stop, lock, net
         )
 
     def sell(
@@ -766,19 +735,13 @@ class CtaTemplate(ABC):
         volume: float,
         stop: bool = False,
         lock: bool = False,
-        net: bool = False
+        net: bool = False,
     ) -> list:
         """
         Send sell order to close a long position.
         """
         return self.send_order(
-            Direction.SHORT,
-            Offset_.CLOSE,
-            price,
-            volume,
-            stop,
-            lock,
-            net
+            Direction.SHORT, Offset_.CLOSE, price, volume, stop, lock, net
         )
 
     def short(
@@ -787,19 +750,13 @@ class CtaTemplate(ABC):
         volume: float,
         stop: bool = False,
         lock: bool = False,
-        net: bool = False
+        net: bool = False,
     ) -> list:
         """
         Send short order to open as short position.
         """
         return self.send_order(
-            Direction.SHORT,
-            Offset_.OPEN,
-            price,
-            volume,
-            stop,
-            lock,
-            net
+            Direction.SHORT, Offset_.OPEN, price, volume, stop, lock, net
         )
 
     def cover(
@@ -808,19 +765,13 @@ class CtaTemplate(ABC):
         volume: float,
         stop: bool = False,
         lock: bool = False,
-        net: bool = False
+        net: bool = False,
     ) -> list:
         """
         Send cover order to close a short position.
         """
         return self.send_order(
-            Direction.LONG,
-            Offset_.CLOSE,
-            price,
-            volume,
-            stop,
-            lock,
-            net
+            Direction.LONG, Offset_.CLOSE, price, volume, stop, lock, net
         )
 
     def send_order(
@@ -831,7 +782,7 @@ class CtaTemplate(ABC):
         volume: float,
         stop: bool = False,
         lock: bool = False,
-        net: bool = False
+        net: bool = False,
     ) -> list:
         """
         Send a new order.
@@ -887,7 +838,7 @@ class CtaTemplate(ABC):
         days: int,
         interval: Interval = Interval.MINUTE,
         callback: Callable = None,
-        use_database: bool = False
+        use_database: bool = False,
     ) -> None:
         """
         Load historical bar data for initializing strategy.
@@ -896,11 +847,7 @@ class CtaTemplate(ABC):
             callback: Callable = self.on_bar
 
         bars: List[BarData] = self.cta_engine.load_bar(
-            self.vt_symbol,
-            days,
-            interval,
-            callback,
-            use_database
+            self.vt_symbol, days, interval, callback, use_database
         )
 
         for bar in bars:
@@ -910,7 +857,9 @@ class CtaTemplate(ABC):
         """
         Load historical tick data for initializing strategy.
         """
-        ticks: List[TickData] = self.cta_engine.load_tick(self.vt_symbol, days, self.on_tick)
+        ticks: List[TickData] = self.cta_engine.load_tick(
+            self.vt_symbol, days, self.on_tick
+        )
 
         for tick in ticks:
             self.on_tick(tick)
@@ -969,6 +918,7 @@ class CtaSignal(ABC):
 
 class TargetPosTemplate(CtaTemplate):
     """"""
+
     tick_add = 1
 
     last_tick: TickData = None
@@ -1143,7 +1093,9 @@ def member_calculate_statistics(self, df: DataFrame = None, output=True) -> dict
         x[x <= 0] = np.nan
         df["return"] = np.log(x).fillna(0)
 
-        df["highlevel"] = df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
+        df["highlevel"] = (
+            df["balance"].rolling(min_periods=1, window=len(df), center=False).max()
+        )
         df["drawdown"] = df["balance"] - df["highlevel"]
         df["ddpercent"] = df["drawdown"] / df["highlevel"] * 100
 
@@ -1195,12 +1147,20 @@ def member_calculate_statistics(self, df: DataFrame = None, output=True) -> dict
 
         if return_std:
             daily_risk_free: float = self.risk_free / np.sqrt(self.annual_days)
-            sharpe_ratio: float = (daily_return - daily_risk_free) / return_std * np.sqrt(self.annual_days)
+            sharpe_ratio: float = (
+                (daily_return - daily_risk_free)
+                / return_std
+                * np.sqrt(self.annual_days)
+            )
 
-            ewm_window: ExponentialMovingWindow = df["return"].ewm(halflife=self.half_life)
+            ewm_window: ExponentialMovingWindow = df["return"].ewm(
+                halflife=self.half_life
+            )
             ewm_mean: Series = ewm_window.mean() * 100
             ewm_std: Series = ewm_window.std() * 100
-            ewm_sharpe: float = ((ewm_mean - daily_risk_free) / ewm_std)[-1] * np.sqrt(self.annual_days)
+            ewm_sharpe: float = ((ewm_mean - daily_risk_free) / ewm_std)[-1] * np.sqrt(
+                self.annual_days
+            )
         else:
             sharpe_ratio: float = 0
             ewm_sharpe: float = 0
@@ -1301,23 +1261,18 @@ def member_show_chart(self, df: DataFrame = None) -> go.Figure:
         rows=4,
         cols=1,
         subplot_titles=["Balance", "Drawdown", "Daily Pnl", "Pnl Distribution"],
-        vertical_spacing=0.06
+        vertical_spacing=0.06,
     )
 
-    balance_line = go.Scatter(
-        x=df.index,
-        y=df["balance"],
-        mode="lines",
-        name="Balance"
-    )
+    balance_line = go.Scatter(x=df.index, y=df["balance"], mode="lines", name="Balance")
 
     drawdown_scatter = go.Scatter(
         x=df.index,
         y=df["drawdown"],
         fillcolor="red",
-        fill='tozeroy',
+        fill="tozeroy",
         mode="lines",
-        name="Drawdown"
+        name="Drawdown",
     )
     pnl_bar = go.Bar(y=df["net_pnl"], name="Daily Pnl")
     pnl_histogram = go.Histogram(x=df["net_pnl"], nbinsx=100, name="Days")
@@ -1335,7 +1290,7 @@ def member_run_bf_optimization(
     self,
     optimization_setting: OptimizationSetting,
     output: bool = True,
-    max_workers: int = None
+    max_workers: int = None,
 ) -> list:
     """"""
     if not check_optimization_setting(optimization_setting):
@@ -1347,7 +1302,7 @@ def member_run_bf_optimization(
         optimization_setting,
         get_target_value,
         max_workers=max_workers,
-        output=self.output
+        output=self.output,
     )
 
     if output:
@@ -1357,12 +1312,13 @@ def member_run_bf_optimization(
 
     return results
 
+
 def member_run_ga_optimization(
     self,
     optimization_setting: OptimizationSetting,
     output: bool = True,
     max_workers: int = None,
-    ngen_size: int = 30
+    ngen_size: int = 30,
 ) -> list:
     """"""
     if not check_optimization_setting(optimization_setting):
@@ -1375,7 +1331,7 @@ def member_run_ga_optimization(
         get_target_value,
         max_workers=max_workers,
         ngen_size=ngen_size,
-        output=self.output
+        output=self.output,
     )
 
     if output:
@@ -1384,6 +1340,7 @@ def member_run_ga_optimization(
             self.output(msg)
 
     return results
+
 
 def evaluate(
     target_name: str,
@@ -1398,7 +1355,7 @@ def evaluate(
     capital: int,
     end: datetime,
     mode: BacktestingMode,
-    setting: dict
+    setting: dict,
 ) -> tuple:
     """
     Function for running in multiprocessing.pool
@@ -1416,7 +1373,7 @@ def evaluate(
         pricetick=pricetick,
         capital=capital,
         end=end,
-        mode=mode
+        mode=mode,
     )
 
     engine.add_strategy(strategy_class, setting)
@@ -1446,7 +1403,7 @@ def wrap_evaluate(engine: BacktestingEngine, target_name: str) -> callable:
         engine.pricetick,
         engine.capital,
         engine.end,
-        str(engine.mode)
+        str(engine.mode),
     )
     return func
 
@@ -1458,11 +1415,40 @@ def get_target_value(result: list) -> float:
     return result[1]
 
 
-BacktestingEngine.calculate_statistics=member_calculate_statistics
-BacktestingEngine.show_chart=member_show_chart
-BacktestingEngine.run_bf_optimization=member_run_bf_optimization
+BacktestingEngine.calculate_statistics = member_calculate_statistics
+BacktestingEngine.show_chart = member_show_chart
+BacktestingEngine.run_bf_optimization = member_run_bf_optimization
 BacktestingEngine.run_optimization = member_run_bf_optimization
-BacktestingEngine.run_ga_optimization=member_run_ga_optimization
+BacktestingEngine.run_ga_optimization = member_run_ga_optimization
 
-if 'vnpy' not in sys.modules.keys():
-    sys.modules["vnpy_ctastrategy"]=vnpyrs
+
+def member_exec_(self):
+    from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+    setting: dict = load_json("vnpyrs.json")
+    chart_path = setting.get("chartpath", "")
+    if chart_path == "":
+        QMessageBox.information(
+            None,
+            "注意",
+            "这可能是您第一次运行vnpyrs的K线图表，请选择vnpyrs-chart(.exe)文件的路径，程序会记录这次选择，以后可以在vnpy的配置目录中找到vnpyrs.json修改",
+            QMessageBox.Ok,
+        )
+        file_path, _ = QFileDialog.getOpenFileName(
+            caption="请选择vnpyrs-chart(.exe)文件的路径"
+        )
+        try:
+            subprocess.run([file_path])
+        except:
+            raise
+        else:
+            setting["chartpath"] = file_path
+            save_json("vnpyrs.json", setting)
+    else:
+        subprocess.run([chart_path])
+
+
+CandleChartDialog.exec_ = member_exec_
+
+if "vnpy" not in sys.modules.keys():
+    sys.modules["vnpy_ctastrategy"] = vnpyrs

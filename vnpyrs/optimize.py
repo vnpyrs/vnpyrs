@@ -10,8 +10,10 @@ from _collections_abc import dict_keys, dict_values, Iterable
 from tqdm import tqdm
 from deap import creator, base, tools, algorithms
 
+
 def _(str):
     return str
+
 
 OUTPUT_FUNC = Callable[[str], None]
 EVALUATE_FUNC = Callable[[dict], dict]
@@ -34,11 +36,7 @@ class OptimizationSetting:
         self.target_name: str = ""
 
     def add_parameter(
-        self,
-        name: str,
-        start: float,
-        end: float = None,
-        step: float = None
+        self, name: str, start: float, end: float = None, step: float = None
     ) -> Tuple[bool, str]:
         """"""
         if end is None and step is None:
@@ -81,8 +79,7 @@ class OptimizationSetting:
 
 
 def check_optimization_setting(
-    optimization_setting: OptimizationSetting,
-    output: OUTPUT_FUNC = print
+    optimization_setting: OptimizationSetting, output: OUTPUT_FUNC = print
 ) -> bool:
     """"""
     if not optimization_setting.generate_settings():
@@ -101,7 +98,7 @@ def run_bf_optimization(
     optimization_setting: OptimizationSetting,
     key_func: KEY_FUNC,
     max_workers: int = None,
-    output: OUTPUT_FUNC = print
+    output: OUTPUT_FUNC = print,
 ) -> List[Tuple]:
     """Run brutal force optimization"""
     settings: List[Dict] = optimization_setting.generate_settings()
@@ -111,14 +108,8 @@ def run_bf_optimization(
 
     start: int = perf_counter()
 
-    with ProcessPoolExecutor(
-        max_workers,
-        mp_context=get_context("spawn")
-    ) as executor:
-        it: Iterable = tqdm(
-            executor.map(evaluate_func, settings),
-            total=len(settings)
-        )
+    with ProcessPoolExecutor(max_workers, mp_context=get_context("spawn")) as executor:
+        it: Iterable = tqdm(executor.map(evaluate_func, settings), total=len(settings))
         results: List[Tuple] = list(it)
         results.sort(reverse=True, key=key_func)
 
@@ -136,7 +127,7 @@ def run_ga_optimization(
     max_workers: int = None,
     population_size: int = 100,
     ngen_size: int = 30,
-    output: OUTPUT_FUNC = print
+    output: OUTPUT_FUNC = print,
 ) -> List[Tuple]:
     """Run genetic algorithm optimization"""
     # Define functions for generate parameter randomly
@@ -154,7 +145,7 @@ def run_ga_optimization(
         for i in range(size):
             if random() < indpb:
                 individual[i] = paramlist[i]
-        return individual,
+        return (individual,)
 
     # Set up multiprocessing Pool and Manager
     ctx: BaseContext = get_context("spawn")
@@ -164,28 +155,26 @@ def run_ga_optimization(
 
         # Set up toolbox
         toolbox: base.Toolbox = base.Toolbox()
-        toolbox.register("individual", tools.initIterate, creator.Individual, generate_parameter)
+        toolbox.register(
+            "individual", tools.initIterate, creator.Individual, generate_parameter
+        )
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
         toolbox.register("mate", tools.cxTwoPoint)
         toolbox.register("mutate", mutate_individual, indpb=1)
         toolbox.register("select", tools.selNSGA2)
         toolbox.register("map", pool.map)
-        toolbox.register(
-            "evaluate",
-            ga_evaluate,
-            cache,
-            evaluate_func,
-            key_func
-        )
+        toolbox.register("evaluate", ga_evaluate, cache, evaluate_func, key_func)
 
         total_size: int = len(settings)
-        pop_size: int = population_size                      # number of individuals in each generation
-        lambda_: int = pop_size                              # number of children to produce at each generation
-        mu: int = int(pop_size * 0.8)                        # number of individuals to select for the next generation
+        pop_size: int = population_size  # number of individuals in each generation
+        lambda_: int = pop_size  # number of children to produce at each generation
+        mu: int = int(
+            pop_size * 0.8
+        )  # number of individuals to select for the next generation
 
-        cxpb: float = 0.95         # probability that an offspring is produced by crossover
-        mutpb: float = 1 - cxpb    # probability that an offspring is produced by mutation
-        ngen: int = ngen_size    # number of generation
+        cxpb: float = 0.95  # probability that an offspring is produced by crossover
+        mutpb: float = 1 - cxpb  # probability that an offspring is produced by mutation
+        ngen: int = ngen_size  # number of generation
 
         pop: list = toolbox.population(pop_size)
 
@@ -201,14 +190,7 @@ def run_ga_optimization(
         start: int = perf_counter()
 
         algorithms.eaMuPlusLambda(
-            pop,
-            toolbox,
-            mu,
-            lambda_,
-            cxpb,
-            mutpb,
-            ngen,
-            verbose=True
+            pop, toolbox, mu, lambda_, cxpb, mutpb, ngen, verbose=True
         )
 
         end: int = perf_counter()
@@ -222,10 +204,7 @@ def run_ga_optimization(
 
 
 def ga_evaluate(
-    cache: dict,
-    evaluate_func: callable,
-    key_func: callable,
-    parameters: list
+    cache: dict, evaluate_func: callable, key_func: callable, parameters: list
 ) -> float:
     """
     Functions to be run in genetic algorithm optimization.
@@ -239,4 +218,4 @@ def ga_evaluate(
         cache[tp] = result
 
     value: float = key_func(result)
-    return (value, )
+    return (value,)

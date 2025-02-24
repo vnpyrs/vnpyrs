@@ -1,4 +1,5 @@
-from vnpyrs.widget import create_qapp,BacktesterWindow
+from vnpyrs.widget import create_qapp, BacktesterWindow
+
 
 def main():
     """"""

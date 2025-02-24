@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Callable, Dict, Tuple, Union, Optional
 
 
-
 def _get_trader_dir(temp_name: str) -> Tuple[Path, Path]:
     """
     Get path where trader is running in.
@@ -30,6 +29,7 @@ def _get_trader_dir(temp_name: str) -> Tuple[Path, Path]:
 
 TRADER_DIR, TEMP_DIR = _get_trader_dir(".vntrader")
 sys.path.append(str(TRADER_DIR))
+
 
 def get_file_path(filename: str) -> Path:
     """
@@ -59,10 +59,4 @@ def save_json(filename: str, data: dict) -> None:
     """
     filepath: Path = get_file_path(filename)
     with open(filepath, mode="w+", encoding="UTF-8") as f:
-        json.dump(
-            data,
-            f,
-            indent=4,
-            ensure_ascii=False
-        )
-
+        json.dump(data, f, indent=4, ensure_ascii=False)
