@@ -40,7 +40,7 @@ impl BacktestingMode {
     }
 }
 
-#[pyclass]
+#[pyclass(get_all)]
 #[derive(Clone)]
 pub struct StopOrder {
     pub vt_symbol: String,

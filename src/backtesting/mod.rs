@@ -12,7 +12,10 @@ pub use base::BacktestingMode;
 use base::{EngineType, StopOrder, StopOrderStatus, INTERVAL_DELTA_MAP, STOPORDER_PREFIX};
 use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, TimeDelta, TimeZone, Timelike};
 use chrono_tz::Tz;
-use pyo3::{prelude::*, types::PyDict};
+use pyo3::{
+    prelude::*,
+    types::{PyDict, PyList},
+};
 
 use crate::trader::{
     constant::{Direction, Interval, Offset_, OrderType, Status},
@@ -100,10 +103,11 @@ impl BacktestingEngine {
     }
 
     #[new]
+    #[allow(unexpected_cfgs)]
     pub fn __new__() -> Self {
         #[cfg(Py_LIMITED_API)]
         {
-            println!("您正在使用通用版，兼容Python3.7以上所有版本，但是会降低运行性能。建议拉取源代码自行编译，或下载针对特定Python版本的whl包通过pip安装");
+            println!("您正在使用通用版，兼容Python3.7以上所有版本，但是会降低运行性能。建议拉取源代码自行编译，或下载针对特定Python版本的whl包并通过pip安装");
         }
         BacktestingEngine {
             vt_symbol: "".to_string(),
@@ -1068,6 +1072,39 @@ impl BacktestingEngine {
 
     pub fn has_history_data(&self) -> bool {
         !self.history_data.is_empty()
+    }
+
+    #[getter]
+    pub fn get_history_data(&self, py: Python<'_>) -> PyResult<PyObject> {
+        if self.history_data.is_empty() {
+            return Ok(PyList::empty(py).into());
+        }
+        match self.history_data.front().as_ref().unwrap() {
+            MixData::BarData(_) => {
+                let mut list: Vec<BarData> = Vec::new();
+                for item in self.history_data.iter() {
+                    match item {
+                        MixData::BarData(bar_data) => {
+                            list.push(bar_data.clone());
+                        }
+                        _ => {}
+                    }
+                }
+                return Ok(PyList::new(py, list)?.into());
+            }
+            MixData::TickData(_) => {
+                let mut list: Vec<TickData> = Vec::new();
+                for item in self.history_data.iter() {
+                    match item {
+                        MixData::TickData(tick_data) => {
+                            list.push(tick_data.clone());
+                        }
+                        _ => {}
+                    }
+                }
+                return Ok(PyList::new(py, list)?.into());
+            }
+        }
     }
 }
 
