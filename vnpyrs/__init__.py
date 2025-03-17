@@ -1431,7 +1431,7 @@ def member_exec_(self):
         QMessageBox.information(
             None,
             "注意",
-            "这可能是您第一次运行vnpyrs的K线图表，请选择vnpyrs-chart(.exe)文件的路径，程序会记录这次选择，以后可以在vnpy的配置目录中找到vnpyrs.json修改",
+            "这可能是您第一次运行vnpyrs的K线图表，请选择vnpyrs-chart(.exe)文件的路径，该文件可以从 https://github.com/vnpyrs/vnpyrs-chart/releases 下载或自己编译。程序会记录这次选择，以后可以在vnpy的配置目录中找到vnpyrs.json修改",
             QMessageBox.Ok,
         )
         file_path, _ = QFileDialog.getOpenFileName(

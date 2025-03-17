@@ -11,6 +11,8 @@ authors = [
 ]
 dependencies = [
 	"tzlocal",
+	"PySide6",
+	"pyqtgraph",
 	"numpy",
 	"pandas",
 	"ta-lib",
@@ -44,7 +46,7 @@ dynamic = ["version"]
 features = ["pyo3/extension-module"]
 
 [project.urls]
-Homepage = "https://github.com/vnpyrs/vnpyrs"
-Documentation = "https://github.com/vnpyrs/vnpyrs"
+Homepage = "https://vnpyrs.com/"
+Documentation = "https://vnpyrs.com/docs/intro/"
 Repository = "https://github.com/vnpyrs/vnpyrs"
 Changelog = "https://github.com/vnpyrs/vnpyrs"

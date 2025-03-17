@@ -1,24 +1,41 @@
 # vnpyrs —— 与vnpy兼容但更快的回测框架
 
-vnpyrs是以提升性能为目的，部分代码用Rust语言重新实现的vnpy。已实现回测和参数调优。
+vnpyrs是以提升性能为目的，部分代码用Rust语言重新实现的vnpy，实现了vnpy的回测与参数调优功能。
 
-## 背景
+它有三种工作模式：
+- 脚本运行模式
+- 图形界面运行模式
+- vnpy插件模式（将极速K线图表嵌入vnpy为其提供服务）
+
+具体快多少？
+- K线图表快几个数量级
+- 数据库读取速度最快是vnpy的6倍以上（Sqlite）
+- 策略代码执行快10%-30%
+
+
+## 由来
 
 众所周知，Python生态强大，编码灵活，但是有个缺点，就是慢。2024年，我实验性的用Rust重写了vnpy的回测模块，惊喜的发现，运行速度提升了近20倍。
 显然，移植到Rust这件事的价值是巨大的。但还有个问题，由于它100%是用Rust编写的，包括策略也是用Rust编写的，那用户就无法使用Python的各种库了。况且，Rust是出了名的难入门的语言。上述的两点会降低它的实用性。
 
-因此，在2025年我重新设定了目标，该项目必须完全兼容Python生态，100%兼容已经为vnpy编写的策略，同时要提升性能。
-由于用户代码是用Python编写的，那么性能提升就不会像第一次用纯Rust编写时那样夸张了，但省下的时间依然不少。如果用examples文件夹里面的案例测试，在不改一行策略代码的情况下，在10核32G的电脑上，配合Python3.11，综合速度提升了一倍。（具体提升多少涉及硬件配置、Python版本和具体策略）
+因此，在2025年我重新设定了目标，该项目必须完全兼容Python生态，理想情况下100%兼容已经为vnpy编写的策略，同时要提升性能。
+由于用户代码是用Python编写的，那么性能提升就不会像用纯Rust编写时那样夸张了，但省下的时间依然不少。如果用examples文件夹里面的案例测试，在不改一行策略代码的情况下，在10核32G的电脑上，配合Python3.11，综合速度提升了一倍。（具体提升多少涉及硬件配置、Python版本和具体策略）
+
+## 开发路线图
+
+不会完全移植vnpy。一个原因是vnpy用到了很多动态语言的特性，以实现插件化，这部分在静态语言上实现很困难，或者需要大量的unsafe代码。另一个原因是没必要，涉及网络的模块，绝大部分时间花在网络的等待上，即使通过Rust、C++重写，体验也不会明显变好。
+
+未来可能会支持用Rust、C、C++写策略，这样的话回测性能提升10倍也是有可能的，但需要谨慎的思考如何设计接口。
 
 ## 环境准备
 
-vnpyrs对python包的依赖和vnpy几乎一样，但去掉了UI相关的包。Python版本需要3.7以上，推荐3.10以上
+vnpyrs对python包的依赖和vnpy几乎一样。Python版本需要3.7以上，推荐3.10以上
 
 ## pip安装
 
-最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，vnpyrs的代码基本上和vnpy原版的代码一一对应，这样您可以把对vnpy的修改移植到vnpyrs上去（虽然需要学习Rust，但是在有本工程大量范例的情况下不会很难）。
+最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，vnpyrs的代码基本上和vnpy原版的代码一一对应，这样您可以把对vnpy的修改移植到vnpyrs上去（虽然需要学习Rust，但是在有本工程源码作为范例的情况下不会很难）。
 
-如果只是想试用一下，可以通过pip安装，但PYPI服务器上的版本一般是通用版本，未针对特定Python版本做过性能优化。
+如果只是想试用一下，或者仅仅使用vnpy插件模式，可以通过pip安装，但PYPI服务器上的版本一般是通用版本，未针对特定Python版本做过性能优化（影响回测性能，但不影响K线图表的性能，后者完全是用Rust写的）。
 
 **Windows**
 
@@ -40,7 +57,92 @@ pip install vnpyrs
 
 **Windows**
 
-大体上和Linux一样，只是ta-lib Python版的安装可以依靠现成的whl包，可以从这里下载：https://github.com/cgohlke/talib-build/releases
+以下以Windows 11为例
+
+1.安装Git并拉取源代码
+```
+git clone https://github.com/vnpyrs/vnpyrs.git
+```
+若网络不畅，可以从gitee拉取
+```
+git clone https://gitee.com/vnpyrs/vnpyrs.git
+```
+
+2.安装rust
+
+先从Rust的官网下载64位的rustup-init.exe：
+`https://www.rust-lang.org/zh-CN/tools/install`
+
+双击rustup-init.exe进行安装，需要做出选择时按1进行快速安装，期间会安装Visual Studio社区版，需要手动进行，因为Rust依赖MSVC的开发环境，该步骤是必要的（WSL用户和已安装Visual Studio的用户除外）。
+
+安装完成后打开cmd控制台键入“cargo”以验证是否安装成功
+
+接下来设置crates.io的镜像，以加快下载Rust依赖包的速度
+
+创建文件C:/Users/你的用户名/.cargo/config，内容如下：
+```
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+[source.rsproxy]
+registry = "https://rsproxy.cn/crates.io-index"
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+[registries.rsproxy]
+index = "https://rsproxy.cn/crates.io-index"
+[net]
+git-fetch-with-cli = true
+```
+注意此文件的后缀并非.txt，如果看不到后缀，需要进入文件夹选项，去掉“隐藏已知文件类型的扩展名”前面的勾，之后再删除.txt后缀。
+
+3.安装Python和maturin
+
+登录Python的官网 https://www.python.org/ ，下载所需版本的Python。也可以选择Anaconda之类的环境，但我们以官方Python为例。可采用默认选项安装，但建议添加环境变量。
+
+vnpyrs是一个Rust和Python的混合项目，因此还需要安装maturin插件，您可以全局安装
+```
+pip install maturin
+```
+或者在创建Python虚拟环境后安装，创建虚拟环境的问题后面单独讲，Python社区更加建议用此方式。而且如果想修改vnpyrs代码的话，使用虚拟环境会更加容易
+
+4.把项目编译成whl文件
+
+切换到项目的根目录下（就是README.md所在的文件夹），输入：
+```
+python -m maturin build -r
+```
+现在项目根目录下会多出一个target文件夹，里面有个wheels文件夹，再里面有一个.whl后缀的文件，这个就是针对您当前环境的Python版本做性能优化过的包。如果您之前可以正常运行vnpy，请跳过第5步，直接进行第6步
+
+5.安装ta-lib
+从这里下载ta-lib Python版的whl包：https://github.com/cgohlke/talib-build/releases ，并通过pip安装，命令为：
+```
+pip install (whl文件的文件名)
+```
+例如：`pip install ta_lib-0.6.3-cp313-cp313-win_amd64.whl`
+注意安装过程中会下载它所依赖的Python包，建议使用pip代理以加快下载速度，设置方法自行搜索
+
+6.安装vnpyrs的whl文件
+
+```
+pip install (whl文件的文件名)
+```
+例如：`pip install target\wheels\vnpyrs-0.2.0-cp313-cp313-win_amd64.whl`
+至此安装完成
+
+7.（可选）建立Python虚拟环境，并以调试模式编译、运行vnpyrs
+
+在项目根目录下执行以下命令
+```
+python -m venv .env
+```
+此时会多出来一个.env文件夹。cd进“.env\Scripts”文件夹，再执行“activate”进入该虚拟环境，再cd回来“cd ../..”。
+之后再运行pip、python3、maturin命令的话，只影响该环境，或被该环境影响。直到退出shell会话
+
+这个时候您无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译vnpyrs，而只需要一条：
+```
+python3 -m maturin develop -r
+```
+这个技巧在需要修改vnpyrs代码的时候特别有用
+
 
 **Linux**
 
@@ -93,6 +195,7 @@ pip install maturin
 或者在创建Python虚拟环境后安装，创建虚拟环境的问题后面单独讲，Python社区更加建议用此方式。而且如果想修改vnpyrs代码的话，使用虚拟环境会更加容易
 
 4.把项目编译成whl文件
+
 切换到项目的根目录下（就是README.md所在的文件夹），输入：
 ```
 python3 -m maturin build -r
@@ -100,6 +203,7 @@ python3 -m maturin build -r
 现在项目根目录下会多出一个target文件夹，里面有个wheels文件夹，再里面有一个.whl后缀的文件，这个就是针对您当前环境的Python版本做性能优化过的包。如果您之前可以正常运行vnpy，请跳过第5步，直接进行第6步
 
 5.安装ta-lib
+
 如果想通过pip的方式安装Python版本的ta-lib，必须先安装C++版本的ta-lib。ta-lib的最新版本是0.6，相比之前，官方给出了更为详细的安装步骤：https://ta-lib.org/install/#linux-debian-packages 。
 
 对于大部分人来说可以下载页面上的*_amd64.deb包并使用以下命令安装，虽然这个是C++版本的，但是安装了这个以后，Python版本的ta-lib会因依赖关系随其他包自动安装
@@ -135,9 +239,9 @@ python3 -m maturin develop -r
 这个技巧在需要修改vnpyrs代码的时候特别有用
 
 
-## 脚本运行
+## 脚本运行模式
 
-vnpyrs仅支持脚本运行，在任意目录下创建run.py，写入以下示例代码：
+vnpyrs支持脚本运行，在任意目录下创建backtest.py，写入以下示例代码：
 
 ```Python
 from vnpyrs.backtesting import BacktestingEngine, BacktestingMode
@@ -183,19 +287,57 @@ if __name__ == '__main__':
     main()
 ```
 
-*vnpyrs使用的数据库和json配置文件和vnpy完全一样，二者是共用数据库的。标的300.LOCAL的数据在examples下，导入300_1min_vnpy.csv到vnpy引擎里即可。
-*在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
-    python run.py
+vnpyrs使用的数据库和json配置文件和vnpy完全一样，二者是共用数据库的。标的300.LOCAL的数据在examples下，导入300_1min_vnpy.csv到vnpy引擎里即可。
+在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
+    python backtest.py
+
+## 图形界面运行模式
+
+vnpyrs还支持图形界面运行，在任意目录下创建gui.py，写入以下示例代码：
+
+```Python
+from vnpyrs.widget import create_qapp, BacktesterWindow
 
 
-## 开发路线图
+def main():
+    """"""
+    qapp = create_qapp()
+    backtester_window = BacktesterWindow()
+    backtester_window.showMaximized()
 
-*不会完全移植vnpy。一个原因是vnpy用到了很多动态语言的特性，以实现插件化，这部分在静态语言上实现很困难，或者需要大量的unsafe。另一个原因是没必要，UI和网络模块即使通过Rust、C++重写，体验也不会明显变好，K线渲染可能例外，但那个更适合用OpenGL或Vulkan实现。
+    qapp.exec()
 
-*未来可能会支持用Rust、C、C++写策略，这样的话回测性能提升10倍也是有可能的。
+
+if __name__ == "__main__":
+    main()
+```
+和vnpy一样，在家目录下建立一个名为“strategies”的文件夹，在里面新建一个名为“__init__.py”的空文件，再将包含策略的py文件放到“strategies”文件夹里。
+在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
+    python gui.py
+
+
+## vnpy插件模式（将极速K线图表嵌入vnpy为其提供服务）
+
+首先在vnpy的环境（或虚拟环境）中安装vnpyrs，例如通过pip安装：
+```
+pip install vnpyrs
+```
+编辑vnpy的源文件vnpy_ctabacktester\ui\widget.py，在其顶部添加一行：
+```Python
+from vnpyrs import CandleChartDialog
+```
+找到文件中原有的类`CandleChartDialog`：
+```Python
+class CandleChartDialog(QtWidgets.QDialog):
+```
+将其改名，如改为`CandleChartDialog2`。
+保存修改并重新运行vnpy
+
 
 ## 更新日志
 
 0.1.1：支持sqlite和mysql数据库(2025-1-10)
 
 0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题(2025-1-12)
+
+0.2.0：支持GUI模式；支持K线图表及K线图表嵌入vnpy的模式；支持不带身份校验的MongoDB；修复若干bug
