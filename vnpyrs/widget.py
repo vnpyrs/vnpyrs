@@ -522,7 +522,6 @@ class BacktesterWindow(QtWidgets.QWidget):
             self.candle_dialog.update_trades(trades)
 
         self.candle_dialog.exec_()
-        self.write_log(_("导出完成，请打开vnpyrs配套的图表软件"))
 
     def edit_strategy_code(self) -> None:
         """"""

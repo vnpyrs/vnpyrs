@@ -722,15 +722,16 @@ impl BacktestingEngine {
 
             *self.trade_count.lock().unwrap() += 1;
 
+            let order_cloned=order.lock().unwrap().clone();
             let trade = Arc::new(Mutex::new(TradeData {
-                symbol: order.lock().unwrap().symbol.clone(),
-                exchange: order.lock().unwrap().exchange.clone(),
-                orderid: order.lock().unwrap().orderid.clone(),
+                symbol: order_cloned.symbol.clone(),
+                exchange: order_cloned.exchange.clone(),
+                orderid: order_cloned.orderid.clone(),
                 tradeid: format!("{:8}", self.trade_count.lock().unwrap()),
-                direction: order.lock().unwrap().direction,
-                offset: order.lock().unwrap().offset,
+                direction: order_cloned.direction,
+                offset: order_cloned.offset,
                 price: trade_price,
-                volume: order.lock().unwrap().volume,
+                volume: order_cloned.volume,
                 datetime: self.datetime.lock().unwrap().deref().unwrap(),
                 gateway_name: BacktestingEngine::gateway_name(),
             }));

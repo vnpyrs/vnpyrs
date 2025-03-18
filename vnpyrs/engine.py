@@ -105,12 +105,12 @@ class BacktesterEngine:
 
             for name in dir(module):
                 value = getattr(module, name)
-                from vnpyrs import CtaTemplate
+                from vnpyrs import CtaTemplate, TargetPosTemplate
 
                 if (
                     isinstance(value, type)
                     and issubclass(value, CtaTemplate)
-                    and value not in {CtaTemplate}
+                    and value not in {CtaTemplate, TargetPosTemplate}
                 ):
                     self.classes[value.__name__] = value
         except:  # noqa

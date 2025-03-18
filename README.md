@@ -113,11 +113,13 @@ python -m maturin build -r
 现在项目根目录下会多出一个target文件夹，里面有个wheels文件夹，再里面有一个.whl后缀的文件，这个就是针对您当前环境的Python版本做性能优化过的包。如果您之前可以正常运行vnpy，请跳过第5步，直接进行第6步
 
 5.安装ta-lib
+
 从这里下载ta-lib Python版的whl包：https://github.com/cgohlke/talib-build/releases ，并通过pip安装，命令为：
 ```
 pip install (whl文件的文件名)
 ```
 例如：`pip install ta_lib-0.6.3-cp313-cp313-win_amd64.whl`
+
 注意安装过程中会下载它所依赖的Python包，建议使用pip代理以加快下载速度，设置方法自行搜索
 
 6.安装vnpyrs的whl文件
@@ -126,6 +128,7 @@ pip install (whl文件的文件名)
 pip install (whl文件的文件名)
 ```
 例如：`pip install target\wheels\vnpyrs-0.2.0-cp313-cp313-win_amd64.whl`
+
 至此安装完成
 
 7.（可选）建立Python虚拟环境，并以调试模式编译、运行vnpyrs
@@ -293,7 +296,9 @@ vnpyrs使用的数据库和json配置文件和vnpy完全一样，二者是共用
 
 ## 图形界面运行模式
 
-vnpyrs还支持图形界面运行，在任意目录下创建gui.py，写入以下示例代码：
+vnpyrs还支持图形界面运行。和vnpy一样，在家目录下建立一个名为“strategies”的文件夹，在里面新建一个名为`__init__.py`的空文件，再将包含策略的py文件放到“strategies”文件夹里。
+
+在任意目录下创建gui.py，写入以下示例代码：
 
 ```Python
 from vnpyrs.widget import create_qapp, BacktesterWindow
@@ -311,7 +316,6 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-和vnpy一样，在家目录下建立一个名为“strategies”的文件夹，在里面新建一个名为“__init__.py”的空文件，再将包含策略的py文件放到“strategies”文件夹里。
 在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
     python gui.py
 
@@ -322,7 +326,7 @@ if __name__ == "__main__":
 ```
 pip install vnpyrs
 ```
-编辑vnpy的源文件vnpy_ctabacktester\ui\widget.py，在其顶部添加一行：
+编辑vnpy的源文件（如果是通过pip安装的话，它们就在安装目录或虚拟环境的Lib\site-packages里）vnpy_ctabacktester\ui\widget.py，在其顶部添加一行：
 ```Python
 from vnpyrs import CandleChartDialog
 ```
