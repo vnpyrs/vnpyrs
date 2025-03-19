@@ -344,4 +344,4 @@ class CandleChartDialog(QtWidgets.QDialog):
 
 0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题(2025-1-12)
 
-0.2.0：支持GUI模式；支持K线图表及K线图表嵌入vnpy的模式；支持不带身份校验的MongoDB；修复若干bug
+0.2.0：支持GUI模式；支持K线图表及K线图表嵌入vnpy的模式；支持不带身份校验的MongoDB；修复若干重要bug

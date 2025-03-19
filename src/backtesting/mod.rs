@@ -691,7 +691,7 @@ impl BacktestingEngine {
             let order = Arc::new(Mutex::new(OrderData {
                 symbol: self.symbol.clone(),
                 exchange: self.exchange.clone(),
-                orderid: self.limit_order_count.lock().unwrap().to_string(),
+                orderid: format!("{:8}", self.limit_order_count.lock().unwrap()),
                 direction: stop_order.direction,
                 offset: stop_order.offset,
                 price: stop_order.price,
@@ -722,7 +722,7 @@ impl BacktestingEngine {
 
             *self.trade_count.lock().unwrap() += 1;
 
-            let order_cloned=order.lock().unwrap().clone();
+            let order_cloned = order.lock().unwrap().clone();
             let trade = Arc::new(Mutex::new(TradeData {
                 symbol: order_cloned.symbol.clone(),
                 exchange: order_cloned.exchange.clone(),

@@ -66,7 +66,10 @@ pub struct TickData {
 
     pub localtime: NaiveDateTime,
 }
+
+#[pymethods]
 impl TickData {
+    #[getter]
     pub fn vt_symbol(&self) -> String {
         format!("{}.{}", self.symbol, self.exchange.to_string())
     }
@@ -112,7 +115,9 @@ impl Default for BarData {
     }
 }
 
+#[pymethods]
 impl BarData {
+    #[getter]
     pub fn vt_symbol(&self) -> String {
         format!("{}.{}", self.symbol, self.exchange.to_string())
     }
@@ -146,10 +151,12 @@ pub struct OrderData {
 
 #[pymethods]
 impl OrderData {
+    #[getter]
     pub fn vt_symbol(&self) -> String {
         format!("{}.{}", self.symbol, self.exchange)
     }
 
+    #[getter]
     pub fn vt_orderid(&self) -> String {
         format!("{}.{}", self.gateway_name, self.orderid)
     }
@@ -178,14 +185,17 @@ pub struct TradeData {
 
 #[pymethods]
 impl TradeData {
+    #[getter]
     pub fn vt_symbol(&self) -> String {
         format!("{}.{}", self.symbol, self.exchange.to_string())
     }
 
+    #[getter]
     pub fn vt_orderid(&self) -> String {
         format!("{}.{}", self.gateway_name, self.orderid)
     }
 
+    #[getter]
     pub fn vt_tradeid(&self) -> String {
         format!("{}.{}", self.gateway_name, self.tradeid)
     }

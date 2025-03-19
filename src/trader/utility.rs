@@ -234,7 +234,7 @@ impl BarGenerator {
         self.window_bar.as_mut().unwrap().open_interest = bar.open_interest;
 
         // Check if window bar completed
-        if (bar.datetime.minute() + 1) % self.window != 0 {
+        if (bar.datetime.minute() + 1) % self.window == 0 {
             self.on_window_bar
                 .as_ref()
                 .unwrap()
@@ -364,7 +364,7 @@ impl BarGenerator {
             self.window_bar.as_mut().unwrap().open_interest = bar.open_interest;
 
             self.interval_count += 1;
-            if self.interval_count % self.window != 0 {
+            if self.interval_count % self.window == 0 {
                 self.interval_count = 0;
                 self.on_window_bar
                     .as_ref()
