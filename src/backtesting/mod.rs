@@ -614,7 +614,7 @@ impl BacktestingEngine {
                 symbol: order.symbol.clone(),
                 exchange: order.exchange.clone(),
                 orderid: order.orderid.clone(),
-                tradeid: format!("{:8}", self.trade_count.lock().unwrap()),
+                tradeid: format!("{:10}", self.trade_count.lock().unwrap()),
                 direction: order.direction,
                 offset: order.offset,
                 price: trade_price,
@@ -691,7 +691,7 @@ impl BacktestingEngine {
             let order = Arc::new(Mutex::new(OrderData {
                 symbol: self.symbol.clone(),
                 exchange: self.exchange.clone(),
-                orderid: format!("{:8}", self.limit_order_count.lock().unwrap()),
+                orderid: format!("{:10}", self.limit_order_count.lock().unwrap()),
                 direction: stop_order.direction,
                 offset: stop_order.offset,
                 price: stop_order.price,
@@ -727,7 +727,7 @@ impl BacktestingEngine {
                 symbol: order_cloned.symbol.clone(),
                 exchange: order_cloned.exchange.clone(),
                 orderid: order_cloned.orderid.clone(),
-                tradeid: format!("{:8}", self.trade_count.lock().unwrap()),
+                tradeid: format!("{:10}", self.trade_count.lock().unwrap()),
                 direction: order_cloned.direction,
                 offset: order_cloned.offset,
                 price: trade_price,
@@ -864,7 +864,7 @@ impl BacktestingEngine {
             volume: volume,
             datetime: self.datetime.lock().unwrap().deref().unwrap(),
             stop_orderid: format!(
-                "{}.{:8}",
+                "{}.{:10}",
                 STOPORDER_PREFIX,
                 self.stop_order_count.lock().unwrap()
             ),
@@ -906,7 +906,7 @@ impl BacktestingEngine {
         let order = Arc::new(Mutex::new(OrderData {
             symbol: self.symbol.clone(),
             exchange: self.exchange.clone(),
-            orderid: format!("{:8}", self.limit_order_count.lock().unwrap()),
+            orderid: format!("{:10}", self.limit_order_count.lock().unwrap()),
             direction: direction,
             offset: offset,
             price: price,

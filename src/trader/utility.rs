@@ -51,8 +51,8 @@ pub fn get_file_path(filename: &str) -> PathBuf {
 }
 
 pub fn round_to(value: f64, target: f64) -> f64 {
-    let value: Decimal = Decimal::from_f64(value).unwrap();
-    let target: Decimal = Decimal::from_f64(target).unwrap();
+    let value: Decimal = Decimal::from_str(&value.to_string()).unwrap();
+    let target: Decimal = Decimal::from_str(&target.to_string()).unwrap();
     ((value / target).round() * target)
         .to_string()
         .parse()

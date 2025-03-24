@@ -1,6 +1,6 @@
-# vnpyrs —— 与vnpy兼容但更快的回测框架
+# VnpyRS —— 与vnpy兼容但更快的回测框架
 
-vnpyrs是以提升性能为目的，部分代码用Rust语言重新实现的vnpy，实现了vnpy的回测与参数调优功能。
+VnpyRS是以提升性能为目的，部分代码用Rust语言重新实现的vnpy，实现了vnpy的回测与参数调优功能。
 
 它有三种工作模式：
 - 脚本运行模式
@@ -8,9 +8,23 @@ vnpyrs是以提升性能为目的，部分代码用Rust语言重新实现的vnpy
 - vnpy插件模式（将极速K线图表嵌入vnpy为其提供服务）
 
 具体快多少？
-- K线图表快几个数量级
+- K线图表快几个数量级，你没听错，说快100倍可能都太保守，K线超过一定数量后vnpy会完全卡死，而VnpyRS依然流畅
 - 数据库读取速度最快是vnpy的6倍以上（Sqlite）
-- 策略代码执行快10%-30%
+- 策略代码执行快7%-87%，具体见下表：
+（测试环境：Win11，Python3.11.3，CPU:12th Gen Intel(R) Core(TM) i7-12700H   2.30 GHz，内存:32G。
+测试时均用GUI且置于前台，测多次取次小值。
+另：不同的Python版本性能优化程度不同，其中Python通用版是最慢的，做性能测试时不应考虑该版本）
+
+|策略名称                | vnpy耗时 | VnpyRS耗时 | 加速百分比 |
+|-----------------------|----------|-----------|---------|
+|AtrRsiStrategy         | 11.7     | 8.62  | 36% |
+|BollChannelStrategy    | 1.82     | 1.09  | 67% |
+|DoubleMaStrategy       | 5.04     | 4.45  | 13% |
+|DualThrustStrategy     | 6.38     | 3.42  | 87% |
+|KingKeltnerStrategy    | 2.86     | 1.92  | 49% |
+|MultiSignalStrategy    | 12.1     | 11.3  | 7%  |
+|MultiTimeframeStrategy | 2.47     | 1.55  | 59% |
+|TurtleSignalStrategy   | 19.8     | 11.8  | 68% |
 
 
 ## 由来
@@ -29,13 +43,13 @@ vnpyrs是以提升性能为目的，部分代码用Rust语言重新实现的vnpy
 
 ## 环境准备
 
-vnpyrs对python包的依赖和vnpy几乎一样。Python版本需要3.7以上，推荐3.10以上
+VnpyRS对python包的依赖和vnpy几乎一样。Python版本需要3.7以上，推荐3.10以上
 
 ## pip安装
 
-最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，vnpyrs的代码基本上和vnpy原版的代码一一对应，这样您可以把对vnpy的修改移植到vnpyrs上去（虽然需要学习Rust，但是在有本工程源码作为范例的情况下不会很难）。
+最佳的安装方式是源码编译安装，这样可以让pyo3启用针对特定的Python版本进行性能优化，而且大部分的深度vnpy用户都对代码做过修改，VnpyRS的代码基本上和vnpy原版的代码一一对应，这样您可以把对vnpy的修改移植到VnpyRS上去（虽然需要学习Rust，但是在有本工程源码作为范例的情况下不会很难）。
 
-如果只是想试用一下，或者仅仅使用vnpy插件模式，可以通过pip安装，但PYPI服务器上的版本一般是通用版本，未针对特定Python版本做过性能优化（影响回测性能，但不影响K线图表的性能，后者完全是用Rust写的）。
+如果只是想试用一下，或者仅仅使用vnpy插件模式，可以通过pip安装，但PYPI服务器上的版本一般是Python通用版本，未针对特定Python版本做过性能优化（影响回测性能，但不影响K线图表的性能，后者完全是用Rust写的）。
 
 **Windows**
 
@@ -98,11 +112,11 @@ git-fetch-with-cli = true
 
 登录Python的官网 https://www.python.org/ ，下载所需版本的Python。也可以选择Anaconda之类的环境，但我们以官方Python为例。可采用默认选项安装，但建议添加环境变量。
 
-vnpyrs是一个Rust和Python的混合项目，因此还需要安装maturin插件，您可以全局安装
+VnpyRS是一个Rust和Python的混合项目，因此还需要安装maturin插件，您可以全局安装
 ```
 pip install maturin
 ```
-或者在创建Python虚拟环境后安装，创建虚拟环境的问题后面单独讲，Python社区更加建议用此方式。而且如果想修改vnpyrs代码的话，使用虚拟环境会更加容易
+或者在创建Python虚拟环境后安装，创建虚拟环境的问题后面单独讲，Python社区更加建议用此方式。而且如果想修改VnpyRS代码的话，使用虚拟环境会更加容易
 
 4.把项目编译成whl文件
 
@@ -122,7 +136,7 @@ pip install (whl文件的文件名)
 
 注意安装过程中会下载它所依赖的Python包，建议使用pip代理以加快下载速度，设置方法自行搜索
 
-6.安装vnpyrs的whl文件
+6.安装VnpyRS的whl文件
 
 ```
 pip install (whl文件的文件名)
@@ -131,7 +145,7 @@ pip install (whl文件的文件名)
 
 至此安装完成
 
-7.（可选）建立Python虚拟环境，并以调试模式编译、运行vnpyrs
+7.（可选）建立Python虚拟环境，并以调试模式编译、运行VnpyRS
 
 在项目根目录下执行以下命令
 ```
@@ -140,11 +154,11 @@ python -m venv .env
 此时会多出来一个.env文件夹。cd进“.env\Scripts”文件夹，再执行“activate”进入该虚拟环境，再cd回来“cd ../..”。
 之后再运行pip、python3、maturin命令的话，只影响该环境，或被该环境影响。直到退出shell会话
 
-这个时候您无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译vnpyrs，而只需要一条：
+这个时候您无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译VnpyRS，而只需要一条：
 ```
 python3 -m maturin develop -r
 ```
-这个技巧在需要修改vnpyrs代码的时候特别有用
+这个技巧在需要修改VnpyRS代码的时候特别有用
 
 
 **Linux**
@@ -191,11 +205,11 @@ git-fetch-with-cli = true
 
 3.安装maturin
 
-vnpyrs是一个Rust和Python的混合项目，因此还需要安装maturin插件，您可以全局安装
+VnpyRS是一个Rust和Python的混合项目，因此还需要安装maturin插件，您可以全局安装
 ```
 pip install maturin
 ```
-或者在创建Python虚拟环境后安装，创建虚拟环境的问题后面单独讲，Python社区更加建议用此方式。而且如果想修改vnpyrs代码的话，使用虚拟环境会更加容易
+或者在创建Python虚拟环境后安装，创建虚拟环境的问题后面单独讲，Python社区更加建议用此方式。而且如果想修改VnpyRS代码的话，使用虚拟环境会更加容易
 
 4.把项目编译成whl文件
 
@@ -215,7 +229,7 @@ sudo dpkg -i ta-lib_0.6.4_amd64.deb
 ```
 另一种安装方式是找到对应操作系统的对应Python版本的whl包，但ta-lib官方只提供Windows平台的。
 
-6.安装vnpyrs的whl文件
+6.安装VnpyRS的whl文件
 
 whl文件可以通过pip来安装。注意安装过程中会下载它所依赖的Python包，建议使用pip代理以加快下载速度，设置方法自行搜索
 ```
@@ -223,7 +237,7 @@ pip install (whl文件的文件名)
 ```
 至此安装完成
 
-7.（可选）建立Python虚拟环境，并以调试模式编译、运行vnpyrs
+7.（可选）建立Python虚拟环境，并以调试模式编译、运行VnpyRS
 
 在项目根目录下执行以下命令
 ```
@@ -235,16 +249,16 @@ source .env/bin/activate
 ```
 之后再运行pip、python3、maturin命令的话，只影响该环境，或被该环境影响。直到退出shell会话
 
-这个时候您无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译vnpyrs，而只需要一条：
+这个时候您无需运行“python3 -m maturin build -r”、“pip install (whl文件的文件名)”两条命令编译VnpyRS，而只需要一条：
 ```
 python3 -m maturin develop -r
 ```
-这个技巧在需要修改vnpyrs代码的时候特别有用
+这个技巧在需要修改VnpyRS代码的时候特别有用
 
 
 ## 脚本运行模式
 
-vnpyrs支持脚本运行，在任意目录下创建backtest.py，写入以下示例代码：
+VnpyRS支持脚本运行，在任意目录下创建backtest.py，写入以下示例代码：
 
 ```Python
 from vnpyrs.backtesting import BacktestingEngine, BacktestingMode
@@ -290,13 +304,15 @@ if __name__ == '__main__':
     main()
 ```
 
-vnpyrs使用的数据库和json配置文件和vnpy完全一样，二者是共用数据库的。标的300.LOCAL的数据在examples下，导入300_1min_vnpy.csv到vnpy引擎里即可。
-在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
-    python backtest.py
+VnpyRS使用的数据库和json配置文件和vnpy完全一样，二者是共用数据库的（但部分数据库暂时不支持，会在未来补上）。标的300.LOCAL的数据在examples下，导入300_1min_vnpy.csv到vnpy引擎里即可。
+在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动VnpyRS：
+```
+python backtest.py
+```
 
 ## 图形界面运行模式
 
-vnpyrs还支持图形界面运行。和vnpy一样，在家目录下建立一个名为“strategies”的文件夹，在里面新建一个名为`__init__.py`的空文件，再将包含策略的py文件放到“strategies”文件夹里。
+VnpyRS还支持图形界面运行。和vnpy一样，在家目录下建立一个名为“strategies”的文件夹，在里面新建一个名为`__init__.py`的空文件，再将包含策略的py文件放到“strategies”文件夹里。
 
 在任意目录下创建gui.py，写入以下示例代码：
 
@@ -316,13 +332,15 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动vnpyrs：
-    python gui.py
+在该目录下打开CMD（按住Shift->点击鼠标右键->在此处打开命令窗口/PowerShell）后运行下列命令启动VnpyRS：
+```
+python gui.py
+```
 
 
 ## vnpy插件模式（将极速K线图表嵌入vnpy为其提供服务）
 
-首先在vnpy的环境（或虚拟环境）中安装vnpyrs，例如通过pip安装：
+首先在vnpy的环境（或虚拟环境）中安装VnpyRS，例如通过pip安装：
 ```
 pip install vnpyrs
 ```
@@ -344,4 +362,4 @@ class CandleChartDialog(QtWidgets.QDialog):
 
 0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题(2025-1-12)
 
-0.2.0：支持GUI模式；支持K线图表及K线图表嵌入vnpy的模式；支持不带身份校验的MongoDB；修复若干重要bug
+0.2.0：vnpy自带的所有策略均通过了测试；支持GUI模式；支持K线图表及K线图表嵌入vnpy的模式；支持不带身份校验的MongoDB；修复若干重要bug
