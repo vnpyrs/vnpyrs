@@ -25,6 +25,7 @@ use crate::trader::{
 };
 
 static GLOBAL_HISTORY_DATA: Mutex<LinkedList<MixData>> = Mutex::new(LinkedList::new());
+static GLOBAL_HISTORY_DATA_KEY: Mutex<String> = Mutex::new(String::new());
 
 #[pyclass]
 pub struct BacktestingEngine {
@@ -66,7 +67,6 @@ pub struct BacktestingEngine {
     #[pyo3(get, set)]
     interval: Option<Interval>,
     _days: i64,
-    history_data: LinkedList<MixData>,
 
     stop_order_count: Mutex<i64>,
     stop_orders: Mutex<BTreeMap<String, Arc<Mutex<StopOrder>>>>,
@@ -84,9 +84,6 @@ pub struct BacktestingEngine {
     daily_results: Mutex<BTreeMap<NaiveDate, DailyResult>>,
     #[pyo3(get, set)]
     daily_df: Option<PyObject>,
-
-    #[pyo3(get, set)]
-    rs_use_global_data: bool,
 
     rs_pyfunc_output: Option<PyObject>,
 }
@@ -133,7 +130,6 @@ impl BacktestingEngine {
 
             interval: None,
             _days: 0,
-            history_data: LinkedList::new(),
 
             stop_order_count: Mutex::new(0),
             stop_orders: Mutex::new(BTreeMap::new()),
@@ -151,7 +147,6 @@ impl BacktestingEngine {
             daily_results: Mutex::new(BTreeMap::new()),
             daily_df: None,
 
-            rs_use_global_data: false,
             rs_pyfunc_output: None,
         }
     }
@@ -253,11 +248,20 @@ impl BacktestingEngine {
         Ok(())
     }
 
+    pub fn rs_get_history_data_key(&self) -> String {
+        format!(
+            "{} {} {} {} {}",
+            self.symbol,
+            self.exchange,
+            self.interval.unwrap(),
+            self.start,
+            self.end
+        )
+    }
+
     pub fn load_data(&mut self, py: Python<'_>) -> PyResult<()> {
-        if self.rs_use_global_data {
-            if !GLOBAL_HISTORY_DATA.lock().unwrap().is_empty() {
-                return Ok(());
-            }
+        if *GLOBAL_HISTORY_DATA_KEY.lock().unwrap() == self.rs_get_history_data_key() {
+            return Ok(());
         }
         self.output(py, "开始加载历史数据");
         if self.end == NaiveDateTime::default() {
@@ -267,10 +271,7 @@ impl BacktestingEngine {
             self.output(py, "起始日期必须小于结束日期");
             return Ok(());
         }
-        if self.rs_use_global_data {
-        } else {
-            self.history_data.clear(); // Clear previously loaded history data
-        }
+        GLOBAL_HISTORY_DATA.lock().unwrap().clear();
 
         // Load 30 days of data each time and allow for progress update
         let total_days = (self.end - self.start).num_days();
@@ -307,19 +308,11 @@ impl BacktestingEngine {
                     start,
                     end,
                 );
-                if self.rs_use_global_data {
-                    GLOBAL_HISTORY_DATA.lock().unwrap().append(&mut data);
-                } else {
-                    self.history_data.append(&mut data);
-                }
+                GLOBAL_HISTORY_DATA.lock().unwrap().append(&mut data);
             } else {
                 let mut data: LinkedList<MixData> =
                     load_tick_data(&self.symbol, &self.exchange, start, end);
-                if self.rs_use_global_data {
-                    GLOBAL_HISTORY_DATA.lock().unwrap().append(&mut data);
-                } else {
-                    self.history_data.append(&mut data);
-                }
+                GLOBAL_HISTORY_DATA.lock().unwrap().append(&mut data);
             }
 
             progress += progress_days as f64 / total_days as f64;
@@ -329,12 +322,9 @@ impl BacktestingEngine {
             end += progress_delta
         }
 
-        let len = if self.rs_use_global_data {
-            GLOBAL_HISTORY_DATA.lock().unwrap().len()
-        } else {
-            self.history_data.len()
-        };
+        let len = GLOBAL_HISTORY_DATA.lock().unwrap().len();
         self.output(py, format!("历史数据加载完成，数据量：{}", len).as_str());
+        *GLOBAL_HISTORY_DATA_KEY.lock().unwrap() = self.rs_get_history_data_key();
         Ok(())
     }
 
@@ -362,21 +352,12 @@ impl BacktestingEngine {
             .unwrap();
         self.output(py, "开始回放历史数据");
 
-        let total_size: usize = if self.rs_use_global_data {
-            GLOBAL_HISTORY_DATA.lock().unwrap().len()
-        } else {
-            self.history_data.len()
-        };
+        let total_size: usize = GLOBAL_HISTORY_DATA.lock().unwrap().len();
         let batch_size: usize = (total_size / 10).max(1);
 
         let global_history_data_mutex;
-        let data_iter;
-        if self.rs_use_global_data {
-            global_history_data_mutex = GLOBAL_HISTORY_DATA.lock().unwrap();
-            data_iter = global_history_data_mutex.iter().enumerate();
-        } else {
-            data_iter = self.history_data.iter().enumerate();
-        }
+        global_history_data_mutex = GLOBAL_HISTORY_DATA.lock().unwrap();
+        let data_iter = global_history_data_mutex.iter().enumerate();
         for (i, item) in data_iter {
             py.check_signals()?;
             match item {
@@ -1072,18 +1053,24 @@ impl BacktestingEngine {
     }
 
     pub fn has_history_data(&self) -> bool {
-        !self.history_data.is_empty()
+        !GLOBAL_HISTORY_DATA.lock().unwrap().is_empty()
     }
 
     #[getter]
     pub fn get_history_data(&self, py: Python<'_>) -> PyResult<PyObject> {
-        if self.history_data.is_empty() {
+        if GLOBAL_HISTORY_DATA.lock().unwrap().is_empty() {
             return Ok(PyList::empty(py).into());
         }
-        match self.history_data.front().as_ref().unwrap() {
+        match GLOBAL_HISTORY_DATA
+            .lock()
+            .unwrap()
+            .front()
+            .as_ref()
+            .unwrap()
+        {
             MixData::BarData(_) => {
                 let mut list: Vec<BarData> = Vec::new();
-                for item in self.history_data.iter() {
+                for item in GLOBAL_HISTORY_DATA.lock().unwrap().iter() {
                     match item {
                         MixData::BarData(bar_data) => {
                             list.push(bar_data.clone());
@@ -1095,7 +1082,7 @@ impl BacktestingEngine {
             }
             MixData::TickData(_) => {
                 let mut list: Vec<TickData> = Vec::new();
-                for item in self.history_data.iter() {
+                for item in GLOBAL_HISTORY_DATA.lock().unwrap().iter() {
                     match item {
                         MixData::TickData(tick_data) => {
                             list.push(tick_data.clone());

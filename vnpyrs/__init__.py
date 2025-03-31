@@ -1361,7 +1361,6 @@ def evaluate(
     Function for running in multiprocessing.pool
     """
     engine: BacktestingEngine = BacktestingEngine()
-    engine.rs_use_global_data = True
 
     engine.set_parameters(
         vt_symbol=vt_symbol,
