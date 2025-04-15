@@ -1,6 +1,8 @@
 use chrono::NaiveDateTime;
 use chrono_tz::Tz;
 use sqlx::mysql::MySqlPoolOptions;
+use sqlx::postgres::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use sqlx::MySqlPool;
 use sqlx::Row;
 use sqlx::SqlitePool;
@@ -20,6 +22,7 @@ static SH_TZ: Tz = Tz::Asia__Shanghai;
 pub struct GlobalDBMap {
     pub sqlite: Option<Arc<SqliteDatabase>>,
     pub mysql: Option<Arc<MysqlDatabase>>,
+    pub postgresql: Option<Arc<PostgreSQLDatabase>>,
     pub mongodb: Option<Arc<MongodbDatabase>>,
 }
 
@@ -28,6 +31,7 @@ impl GlobalDBMap {
         GlobalDBMap {
             sqlite: None,
             mysql: None,
+            postgresql: None,
             mongodb: None,
         }
     }
@@ -79,7 +83,7 @@ impl BaseDatabase for SqliteDatabase {
         let interval_str = interval.to_string();
 
         let s = self.rt.block_on(
-            sqlx::query("SELECT symbol,exchange,datetime,interval,volume,turnover,open_interest,open_price,high_price,low_price,close_price FROM dbbardata WHERE symbol=? and exchange=? and interval=? and datetime>=? and datetime<=? ORDER BY datetime")
+            sqlx::query("SELECT symbol,exchange,datetime,interval,volume,turnover,open_interest,open_price,high_price,low_price,close_price FROM dbbardata WHERE symbol=? AND exchange=? AND interval=? AND datetime>=? AND datetime<=? ORDER BY datetime")
                     .bind(symbol).bind(exchange).bind(interval_str).bind(start).bind(end)
                     .fetch_all(&self.pool)).unwrap();
         let mut bars = LinkedList::new();
@@ -116,7 +120,7 @@ impl BaseDatabase for SqliteDatabase {
     ) -> LinkedList<MixData> {
         let tz = DB_TZ.clone();
         let s = self.rt.block_on(
-            sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=? and exchange=? and datetime>=? and datetime<=? ORDER BY datetime")
+            sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=? AND exchange=? AND datetime>=? AND datetime<=? ORDER BY datetime")
                     .bind(symbol).bind(exchange).bind(start).bind(end)
                     .fetch_all(&self.pool)).unwrap();
         let mut ticks = LinkedList::new();
@@ -197,7 +201,7 @@ impl BaseDatabase for MysqlDatabase {
         let interval_str = interval.to_string();
 
         let s = self.rt.block_on(
-            sqlx::query("SELECT symbol,exchange,datetime,`interval`,volume,turnover,open_interest,open_price,high_price,low_price,close_price FROM dbbardata WHERE symbol=? and exchange=? and `interval`=? and datetime>=? and datetime<=? ORDER BY datetime")
+            sqlx::query("SELECT symbol,exchange,datetime,`interval`,volume,turnover,open_interest,open_price,high_price,low_price,close_price FROM dbbardata WHERE symbol=? AND exchange=? AND `interval`=? AND datetime>=? AND datetime<=? ORDER BY datetime")
                     .bind(symbol).bind(exchange).bind(interval_str).bind(start).bind(end)
                     .fetch_all(&self.pool)).unwrap();
         let mut bars = LinkedList::new();
@@ -234,7 +238,7 @@ impl BaseDatabase for MysqlDatabase {
     ) -> LinkedList<MixData> {
         let tz = DB_TZ.clone();
         let s = self.rt.block_on(
-            sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=? and exchange=? and datetime>=? and datetime<=? ORDER BY datetime")
+            sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=? AND exchange=? AND datetime>=? AND datetime<=? ORDER BY datetime")
                     .bind(symbol).bind(exchange).bind(start).bind(end)
                     .fetch_all(&self.pool)).unwrap();
         let mut ticks = LinkedList::new();
@@ -279,6 +283,124 @@ impl BaseDatabase for MysqlDatabase {
                 ask_volume_3: db_tick.get::<f64, usize>(32),
                 ask_volume_4: db_tick.get::<f64, usize>(33),
                 ask_volume_5: db_tick.get::<f64, usize>(34),
+                localtime: db_tick.get::<NaiveDateTime, usize>(35),
+                gateway_name: "DB",
+            }));
+        }
+        ticks
+    }
+}
+
+pub struct PostgreSQLDatabase {
+    pool: PgPool,
+    rt: tokio::runtime::Runtime,
+}
+
+impl PostgreSQLDatabase {
+    pub fn connect(url: &str) -> Result<PostgreSQLDatabase, Box<dyn std::error::Error>> {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
+        let pool = rt.block_on(PgPoolOptions::new().max_connections(5).connect(url))?;
+        Ok(PostgreSQLDatabase { pool, rt })
+    }
+}
+
+impl BaseDatabase for PostgreSQLDatabase {
+    fn load_bar_data(
+        &self,
+        symbol: &str,
+        exchange: &str,
+        interval: Interval,
+        start: NaiveDateTime,
+        end: NaiveDateTime,
+    ) -> LinkedList<MixData> {
+        let tz = DB_TZ.clone();
+        let interval_str = interval.to_string();
+
+        let s = self.rt.block_on(
+            sqlx::query("SELECT symbol,exchange,datetime,\"interval\",volume,turnover,open_interest,open_price,high_price,low_price,close_price FROM dbbardata WHERE symbol=$1 AND exchange=$2 AND \"interval\"=$3 AND datetime>=$4 AND datetime<=$5 ORDER BY datetime")
+            .bind(symbol).bind(exchange).bind(interval_str).bind(start).bind(end)
+            .fetch_all(&self.pool)).unwrap();
+        let mut bars = LinkedList::new();
+        for db_bar in s.iter() {
+            bars.push_back(MixData::BarData(BarData {
+                symbol: db_bar.get::<String, usize>(0),
+                exchange: db_bar.get::<String, usize>(1),
+                datetime: db_bar
+                    .get::<NaiveDateTime, usize>(2)
+                    .and_local_timezone(SH_TZ)
+                    .unwrap()
+                    .with_timezone(&tz),
+                interval: Interval::from_str(db_bar.get::<&str, usize>(3))
+                    .expect("数据库中interval字段只能是1m,1h,d,w,tick中的一个"),
+                volume: db_bar.get::<f32, usize>(4).to_string().parse().unwrap(),
+                turnover: db_bar.get::<f32, usize>(5).to_string().parse().unwrap(),
+                open_interest: db_bar.get::<f32, usize>(6).to_string().parse().unwrap(),
+                open_price: db_bar.get::<f32, usize>(7).to_string().parse().unwrap(),
+                high_price: db_bar.get::<f32, usize>(8).to_string().parse().unwrap(),
+                low_price: db_bar.get::<f32, usize>(9).to_string().parse().unwrap(),
+                close_price: db_bar.get::<f32, usize>(10).to_string().parse().unwrap(),
+                gateway_name: "DB",
+            }));
+        }
+        bars
+    }
+
+    fn load_tick_data(
+        &self,
+        symbol: &str,
+        exchange: &str,
+        start: NaiveDateTime,
+        end: NaiveDateTime,
+    ) -> LinkedList<MixData> {
+        let tz = DB_TZ.clone();
+        let s = self.rt.block_on(
+            sqlx::query("SELECT symbol,exchange,datetime,name,volume,turnover,open_interest,last_price,last_volume,limit_up,limit_down,open_price,high_price,low_price,pre_close,bid_price_1,bid_price_2,bid_price_3,bid_price_4,bid_price_5,ask_price_1,ask_price_2,ask_price_3,ask_price_4,ask_price_5,bid_volume_1,bid_volume_2,bid_volume_3,bid_volume_4,bid_volume_5,ask_volume_1,ask_volume_2,ask_volume_3,ask_volume_4,ask_volume_5,localtime FROM dbbardata WHERE symbol=$1 AND exchange=$2 AND datetime>=$3 AND datetime<=$4 ORDER BY datetime")
+                    .bind(symbol).bind(exchange).bind(start).bind(end)
+                    .fetch_all(&self.pool)).unwrap();
+        let mut ticks = LinkedList::new();
+        for db_tick in s.iter() {
+            ticks.push_back(MixData::TickData(TickData {
+                symbol: db_tick.get::<String, usize>(0),
+                exchange: db_tick.get::<String, usize>(1),
+                datetime: db_tick
+                    .get::<NaiveDateTime, usize>(2)
+                    .and_local_timezone(SH_TZ)
+                    .unwrap()
+                    .with_timezone(&tz),
+                name: db_tick.get::<String, usize>(3).to_string().parse().unwrap(),
+                volume: db_tick.get::<f32, usize>(4).to_string().parse().unwrap(),
+                turnover: db_tick.get::<f32, usize>(5).to_string().parse().unwrap(),
+                open_interest: db_tick.get::<f32, usize>(6).to_string().parse().unwrap(),
+                last_price: db_tick.get::<f32, usize>(7).to_string().parse().unwrap(),
+                last_volume: db_tick.get::<f32, usize>(8).to_string().parse().unwrap(),
+                limit_up: db_tick.get::<f32, usize>(9).to_string().parse().unwrap(),
+                limit_down: db_tick.get::<f32, usize>(10).to_string().parse().unwrap(),
+                open_price: db_tick.get::<f32, usize>(11).to_string().parse().unwrap(),
+                high_price: db_tick.get::<f32, usize>(12).to_string().parse().unwrap(),
+                low_price: db_tick.get::<f32, usize>(13).to_string().parse().unwrap(),
+                pre_close: db_tick.get::<f32, usize>(14).to_string().parse().unwrap(),
+                bid_price_1: db_tick.get::<f32, usize>(15).to_string().parse().unwrap(),
+                bid_price_2: db_tick.get::<f32, usize>(16).to_string().parse().unwrap(),
+                bid_price_3: db_tick.get::<f32, usize>(17).to_string().parse().unwrap(),
+                bid_price_4: db_tick.get::<f32, usize>(18).to_string().parse().unwrap(),
+                bid_price_5: db_tick.get::<f32, usize>(19).to_string().parse().unwrap(),
+                ask_price_1: db_tick.get::<f32, usize>(20).to_string().parse().unwrap(),
+                ask_price_2: db_tick.get::<f32, usize>(21).to_string().parse().unwrap(),
+                ask_price_3: db_tick.get::<f32, usize>(22).to_string().parse().unwrap(),
+                ask_price_4: db_tick.get::<f32, usize>(23).to_string().parse().unwrap(),
+                ask_price_5: db_tick.get::<f32, usize>(24).to_string().parse().unwrap(),
+                bid_volume_1: db_tick.get::<f32, usize>(25).to_string().parse().unwrap(),
+                bid_volume_2: db_tick.get::<f32, usize>(26).to_string().parse().unwrap(),
+                bid_volume_3: db_tick.get::<f32, usize>(27).to_string().parse().unwrap(),
+                bid_volume_4: db_tick.get::<f32, usize>(28).to_string().parse().unwrap(),
+                bid_volume_5: db_tick.get::<f32, usize>(29).to_string().parse().unwrap(),
+                ask_volume_1: db_tick.get::<f32, usize>(30).to_string().parse().unwrap(),
+                ask_volume_2: db_tick.get::<f32, usize>(31).to_string().parse().unwrap(),
+                ask_volume_3: db_tick.get::<f32, usize>(32).to_string().parse().unwrap(),
+                ask_volume_4: db_tick.get::<f32, usize>(33).to_string().parse().unwrap(),
+                ask_volume_5: db_tick.get::<f32, usize>(34).to_string().parse().unwrap(),
                 localtime: db_tick.get::<NaiveDateTime, usize>(35),
                 gateway_name: "DB",
             }));

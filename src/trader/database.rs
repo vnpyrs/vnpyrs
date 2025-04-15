@@ -3,7 +3,9 @@ use std::sync::{Arc, LazyLock};
 use chrono_tz::Tz;
 
 use super::{
-    database_impl::{BaseDatabase, MongodbDatabase, MysqlDatabase, SqliteDatabase, DBMAP},
+    database_impl::{
+        BaseDatabase, MongodbDatabase, MysqlDatabase, PostgreSQLDatabase, SqliteDatabase, DBMAP,
+    },
     setting::SETTINGS,
     utility::get_file_path,
 };
@@ -47,6 +49,22 @@ pub fn get_database() -> Arc<dyn BaseDatabase> {
                 ));
             }
             return DBMAP.lock().unwrap().mysql.as_ref().unwrap().clone();
+        }
+        "postgresql" => {
+            if DBMAP.lock().unwrap().postgresql.is_none() {
+                DBMAP.lock().unwrap().postgresql = Some(Arc::new(
+                    PostgreSQLDatabase::connect(&format!(
+                        "postgres://{}:{}@{}:{}/{}",
+                        SETTINGS.database_user,
+                        SETTINGS.database_password,
+                        SETTINGS.database_host,
+                        SETTINGS.database_port,
+                        SETTINGS.database_database
+                    ))
+                    .expect("PostgreSQL数据库打开失败"),
+                ));
+            }
+            return DBMAP.lock().unwrap().postgresql.as_ref().unwrap().clone();
         }
         "mongodb" => {
             if DBMAP.lock().unwrap().mongodb.is_none() {
