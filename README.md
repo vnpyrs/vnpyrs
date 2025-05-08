@@ -9,7 +9,7 @@ VnpyRS是以提升性能为目的，部分代码用Rust语言重新实现的vnpy
 
 具体快多少？
 - K线图表快几个数量级，你没听错，说快100倍可能都太保守，K线超过一定数量后vnpy会完全卡死，而VnpyRS依然流畅，VnpyRS的K线图表绘制采用wgpu技术（类似vulkan），充分利用显卡的并行运算性能
-- 数据库读取速度最快是vnpy的6倍以上（Sqlite），目前支持Sqlite、MySQL、PostgreSQL、MongoDB，支持的数据库还在不断增加
+- 数据库读取速度最快是vnpy的6倍以上（Sqlite），目前支持Sqlite、MySQL、PostgreSQL、MongoDB
 - 策略代码执行快7%-87%，具体见下表：
 （测试环境：Win11，Python3.11.3，CPU:12th Gen Intel(R) Core(TM) i7-12700H   2.30 GHz，内存:32G。
 测试时均用GUI且置于前台，测多次取次小值。
@@ -363,3 +363,5 @@ class CandleChartDialog(QtWidgets.QDialog):
 0.1.2：修复BarData和TickData中的datetime与vnpy里的有差异的问题(2025-1-12)
 
 0.2.0：vnpy自带的所有策略均通过了测试；支持GUI模式；支持K线图表及K线图表嵌入vnpy的模式；支持不带身份校验的MongoDB；修复若干重要bug(2025-3-25)
+
+0.2.1：支持PostgreSQL数据库；修复导出csv时会出错的问题(2025-5-8)
